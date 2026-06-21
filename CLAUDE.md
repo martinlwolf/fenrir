@@ -104,6 +104,8 @@ Para cada hito declarado, lo que se guarda **on-chain** es liviano: el ID del hi
 
 El backend también debe escuchar los eventos que emiten los contratos (vía un listener con ethers.js o similar) para mantener una copia rápida y consultable del estado on-chain en Postgres, en vez de que el frontend tenga que leer todo directo de la blockchain en cada render.
 
+**Toda la lógica del sistema vive en los smart contracts y en el backend, nunca en el frontend.** Las reglas de negocio (quién puede hacer qué, cuándo se libera un tranche, cómo se cuenta un voto, cómo se calcula un reparto, etc.) se implementan en `/contracts` o en `backend/src`, no en `frontend/src`. El frontend es deliberadamente "tonto": renderiza datos que le da la API, envía inputs del usuario tal cual, y no decide ni valida nada que tenga peso de negocio. Esto evita lógica duplicada (y potencialmente inconsistente) entre cliente, servidor y contrato.
+
 ---
 
 ## 7. Smart contracts (carpeta `/contracts`)
@@ -127,6 +129,7 @@ A completar a medida que el código exista. Por ahora:
 - Acceso a la base de datos del backend siempre vía **Prisma** (ORM); no usar SQL crudo ni otro ORM en paralelo.
 - UI solo a través de componentes de **shadcn/ui**; no crear primitivos desde cero salvo que shadcn no cubra el caso.
 - Un único cliente Axios centralizado en el frontend (ej. `src/lib/api.ts`), no instanciar Axios suelto en cada componente.
+- El frontend no implementa lógica de negocio: ni cálculos (montos, plazos, repartos), ni validaciones de reglas (quién puede votar, si un hito puede declararse, etc.), ni decisiones de flujo basadas en esas reglas. Esa lógica vive en los smart contracts o en el backend; el frontend solo la consume vía la API y muestra el resultado. Validaciones de UI (campos requeridos, formato) son la única excepción permitida.
 - Variables de entorno siempre vía `.env`, nunca hardcodeadas. Mantener un `.env.example` actualizado por servicio.
 - Nombres de contratos, eventos y funciones en `PascalCase` / `camelCase` siguiendo la convención ya usada en este documento (`FenrirFactory`, `declareComplete`, etc.) para que el código coincida con el vocabulario de diseño.
 
