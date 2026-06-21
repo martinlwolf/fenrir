@@ -1,0 +1,7 @@
+# Activos digitales (tokens)
+
+- **SepoliaETH** — lo que se aporta al proyecto. Moneda nativa de la red; Fenrir no la crea.
+- **FDT (ERC-20)** — se emite automáticamente al invertir. Da derecho económico proporcional sobre lo que custodia el contrato y poder de voto en el DAO. Es transferible (mercado secundario: quien lo compra hereda parte económica y voto). Usa **snapshot** del saldo en el bloque de cada propuesta para votar de forma segura. No se consume al votar.
+- **Certificado de Finalización (ERC-721, no transferible / soulbound)** — se emite una sola vez, al desarrollador, cuando el proyecto se completa con éxito. Es una credencial de reputación on-chain, **no** representa propiedad del inmueble (esa idea se descartó: un inmueble no es fraccionable, por eso Inversión cierra repartiendo dinero, no fragmentos de propiedad).
+- **Certificado de Proyecto Fallido (ERC-721, no transferible / soulbound)** — se emite al desarrollador cada vez que uno de sus proyectos se cancela. Es el complemento negativo del Certificado de Finalización: cualquier inversor puede revisar la wallet de un desarrollador antes de invertir y ver tanto sus proyectos exitosos como sus fracasos.
+- **Insignia de participación por hito votado (ERC-1155).** Se mintea un comprobante a cada wallet que vota una propuesta resuelta, para dar feedback visual inmediato en la demo y construir un historial de participación también para los inversores/vecinos, no solo para el desarrollador. Reemplaza la necesidad de un token "Citizen NFT" separado para el modo Cívico.
