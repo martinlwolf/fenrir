@@ -17,6 +17,8 @@ No repetir acá lo que ya vive en otro lado — leer siempre la fuente correspon
   comisión, casos borde, glosario): [`business_rules/index.md`](business_rules/index.md).
 
 <!-- SPECKIT START -->
-For additional context about technologies to be used, project structure,
-shell commands, and other important information, read the current plan
+Plan activo: [`specs/001-express-backend-server/plan.md`](specs/001-express-backend-server/plan.md)
+— backend de Fenrir en Express + TypeScript (API REST + listener de eventos on-chain
+espejado en PostgreSQL vía Prisma). Ver también `spec.md`, `research.md`, `data-model.md`,
+`contracts/openapi.md` y `quickstart.md` en esa carpeta.
 <!-- SPECKIT END -->
