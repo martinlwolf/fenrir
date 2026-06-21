@@ -1,0 +1,301 @@
+// Schema del espejo off-chain de Fenrir. Refleja estado ya calculado on-chain; el
+// backend no decide reglas de negocio sobre estas tablas (ver business_rules/ y FR-020).
+// Montos en wei como Decimal (numeric) para no perder precision -- nunca Float.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL") // pooled (runtime)
+  directUrl = env("DIRECT_URL") // directo (migraciones)
+}
+
+// --- Enums (espejan los enums de los contratos) ---
+
+enum ProjectType {
+  Investment
+  Civic
+}
+
+enum ProjectStatus {
+  Funding
+  Building
+  Selling
+  Completed
+  Cancelled
+}
+
+enum MilestoneStatus {
+  Pending
+  Declared
+  Voting
+  Approved
+  Rejected
+}
+
+enum OfferStatus {
+  Voting
+  Approved
+  Rejected
+  Refunded
+  Executed
+}
+
+enum VotingMode {
+  ByToken
+  OneWalletOneVote
+}
+
+enum ProposalKind {
+  ArbiterElection
+  Milestone
+  SaleOffer
+}
+
+enum ProposalStatus {
+  Active
+  AwaitingArbiter
+  Resolved
+}
+
+enum ProposalResult {
+  None
+  Approved
+  Rejected
+}
+
+enum CertificateType {
+  Completion
+  Failure
+}
+
+enum ClaimType {
+  Refund
+  Distribution
+}
+
+// --- Entidades ---
+
+model Developer {
+  wallet              String   @id
+  razonSocial         String
+  cuit                String   @unique
+  verificationDocsUrl String?
+  registeredAtBlock   BigInt
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  projects     Project[]
+  certificates ReputationCertificate[]
+}
+
+model Project {
+  address                  String        @id
+  tokenAddress             String        @unique
+  governorAddress          String        @unique
+  developerWallet          String
+  projectType              ProjectType
+  votingMode               VotingMode
+  status                   ProjectStatus @default(Funding)
+  fmpa                     Decimal       @db.Decimal(78, 0)
+  ff                       Decimal       @db.Decimal(78, 0)
+  totalRaised              Decimal       @default(0) @db.Decimal(78, 0)
+  totalReleasedToDeveloper Decimal       @default(0) @db.Decimal(78, 0)
+  estimatedSalePrice       Decimal       @db.Decimal(78, 0)
+  salePrice                Decimal?      @db.Decimal(78, 0)
+  fundingDeadline          DateTime
+  penaltyAccumulatedBps    Int           @default(0)
+  currentArbiter           String?
+  currentMilestoneIndex    Int           @default(0)
+  createdAtBlock           BigInt
+  createdAt                DateTime      @default(now())
+  updatedAt                DateTime      @updatedAt
+
+  developer   Developer    @relation(fields: [developerWallet], references: [wallet])
+  milestones  Milestone[]
+  proposals   Proposal[]
+  investments Investment[]
+  saleOffers  SaleOffer[]
+  claims      Claim[]
+
+  @@index([status])
+  @@index([projectType])
+  @@index([developerWallet])
+}
+
+model Milestone {
+  id              Int             @id @default(autoincrement())
+  projectAddress  String
+  milestoneIndex  Int
+  budget          Decimal         @db.Decimal(78, 0)
+  deadline        DateTime?
+  status          MilestoneStatus @default(Pending)
+  retryCount      Int             @default(0)
+  trancheReleased Boolean         @default(false)
+  reportHash      String?
+  reportUrl       String?
+  proposalId      Int?
+  updatedAt       DateTime        @updatedAt
+
+  project Project          @relation(fields: [projectAddress], references: [address])
+  report  MilestoneReport?
+
+  @@unique([projectAddress, milestoneIndex])
+  @@index([projectAddress])
+}
+
+model MilestoneReport {
+  id             Int      @id @default(autoincrement())
+  milestoneId    Int?     @unique
+  projectAddress String
+  milestoneIndex Int
+  text           String   @default("")
+  mediaUrls      String[]
+  documentUrls   String[]
+  computedHash   String
+  onChainHash    String?
+  hashMatch      Boolean?
+  storageRef     String
+  createdByWallet String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  milestone Milestone? @relation(fields: [milestoneId], references: [id])
+
+  @@index([projectAddress, milestoneIndex])
+}
+
+model Investment {
+  id             Int      @id @default(autoincrement())
+  projectAddress String
+  investorWallet String
+  amount         Decimal  @db.Decimal(78, 0)
+  txHash         String
+  logIndex       Int
+  block          BigInt
+  createdAt      DateTime @default(now())
+
+  project Project @relation(fields: [projectAddress], references: [address])
+
+  @@unique([txHash, logIndex])
+  @@index([projectAddress])
+  @@index([investorWallet])
+}
+
+model Proposal {
+  id                   Int            @id @default(autoincrement())
+  projectAddress       String
+  governorProposalId   Int
+  kind                 ProposalKind
+  refId                Int
+  snapshotBlock        BigInt
+  totalPowerAtSnapshot Decimal        @default(0) @db.Decimal(78, 0)
+  deadline             DateTime
+  extended             Boolean        @default(false)
+  votesFor             Decimal        @default(0) @db.Decimal(78, 0)
+  votesAgainst         Decimal        @default(0) @db.Decimal(78, 0)
+  weightVoted          Decimal        @default(0) @db.Decimal(78, 0)
+  status               ProposalStatus @default(Active)
+  result               ProposalResult @default(None)
+  electedArbiter       String?
+  updatedAt            DateTime       @updatedAt
+
+  project Project @relation(fields: [projectAddress], references: [address])
+  votes   Vote[]
+
+  @@unique([projectAddress, governorProposalId])
+  @@index([projectAddress])
+}
+
+model Vote {
+  id           Int      @id @default(autoincrement())
+  proposalId   Int
+  voterWallet  String
+  weight       Decimal  @db.Decimal(78, 0)
+  support      Boolean?
+  candidate    String?
+  txHash       String
+  logIndex     Int
+  block        BigInt
+  createdAt    DateTime @default(now())
+
+  proposal Proposal @relation(fields: [proposalId], references: [id])
+
+  @@unique([proposalId, voterWallet])
+  @@index([proposalId])
+}
+
+model SaleOffer {
+  id             Int         @id @default(autoincrement())
+  projectAddress String
+  offerId        Int
+  buyerWallet    String
+  amount         Decimal     @db.Decimal(78, 0)
+  proposalId     Int?
+  status         OfferStatus @default(Voting)
+  updatedAt      DateTime    @updatedAt
+
+  project Project @relation(fields: [projectAddress], references: [address])
+
+  @@unique([projectAddress, offerId])
+  @@index([projectAddress])
+}
+
+model ReputationCertificate {
+  id              Int             @id @default(autoincrement())
+  developerWallet String
+  type            CertificateType
+  tokenId         Int
+  projectAddress  String
+  mintedAtBlock   BigInt
+  createdAt       DateTime        @default(now())
+
+  developer Developer @relation(fields: [developerWallet], references: [wallet])
+
+  @@unique([type, tokenId])
+  @@index([developerWallet])
+}
+
+model Claim {
+  id             Int       @id @default(autoincrement())
+  projectAddress String
+  investorWallet String
+  type           ClaimType
+  amount         Decimal   @db.Decimal(78, 0)
+  txHash         String
+  logIndex       Int
+  block          BigInt
+  createdAt      DateTime  @default(now())
+
+  project Project @relation(fields: [projectAddress], references: [address])
+
+  @@unique([txHash, logIndex])
+  @@index([projectAddress])
+  @@index([investorWallet])
+}
+
+// Cursor del listener para reanudar sin perder/duplicar eventos (FR-005).
+model IngestionCursor {
+  id                 String   @id
+  lastProcessedBlock BigInt
+  updatedAt          DateTime @updatedAt
+}
+
+// Dedup de eventos ya aplicados (idempotencia + resistencia a reorg).
+model ProcessedEvent {
+  txHash      String
+  logIndex    Int
+  eventName   String
+  processedAt DateTime @default(now())
+
+  @@id([txHash, logIndex])
+}
+
+// Nonces para auth por firma de wallet.
+model AuthNonce {
+  wallet    String   @id
+  nonce     String
+  expiresAt DateTime
+}
