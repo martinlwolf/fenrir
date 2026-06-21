@@ -1,0 +1,16 @@
+{
+  "name": "@fenrir/client",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Frontend de Fenrir (React + TS). Stack completo (Vite/Tailwind/shadcn) llega en la feature del client; aca queda declarada la dependencia de los contratos de forma compartidos en shared/.",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "pino": "^10.3.1",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3"
+  }
+}

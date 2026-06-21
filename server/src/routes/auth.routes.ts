@@ -1,8 +1,8 @@
 // Rutas de autenticacion por wallet.
 import { Router } from "express";
+import { registerReadPath } from "../config/docs/openapi";
+import { authController } from "../controllers/auth.controller";
 import { asyncHandler } from "../middlewares/asyncHandler";
-import * as authController from "../controllers/auth.controller";
-import { registerReadPath } from "../docs/openapi";
 
 export const authRouter = Router();
 

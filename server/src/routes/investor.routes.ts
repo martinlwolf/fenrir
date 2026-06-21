@@ -1,8 +1,8 @@
 // Rutas del inversor (historial + reclamable).
 import { Router } from "express";
+import { registerReadPath } from "../config/docs/openapi";
+import { investorController } from "../controllers/investor.controller";
 import { asyncHandler } from "../middlewares/asyncHandler";
-import * as investorController from "../controllers/investor.controller";
-import { registerReadPath } from "../docs/openapi";
 
 export const investorRouter = Router();
 

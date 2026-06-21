@@ -2,7 +2,7 @@
 // websocket. Es la unica puerta de entrada al "afuera" on-chain; las llamadas view
 // se hacen desde services, nunca desde controllers (skill backend-architecture).
 import { Contract, JsonRpcProvider, WebSocketProvider, type Provider } from "ethers";
-import { env } from "../config/env";
+import { env } from "../../config/env";
 import { ABIS } from "./abis";
 
 function buildProvider(): Provider {

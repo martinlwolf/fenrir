@@ -1,27 +1,22 @@
 // Handlers de la etapa de venta y reparto (emitidos por FenrirProject, solo Inversion)
 // y de los reclamos. Reflejan estado; SaleExecuted ademas emite el certificado de
 // finalizacion (la via de exito en Inversion no pasa por ProjectCompleted).
-import { insertClaim } from "../../daos/claim.dao";
-import { hydrateProject, hydrateSaleOffer } from "../../services/sync.service";
-import { recordCertificate } from "../../services/developer.service";
+import { claimRepository } from "../../persistence/repositories/claim.repository";
+import { developerService } from "../../services/developer.service";
+import { syncService } from "../sync.service";
 import type { EventContext, HandlerMap } from "./types";
+import { withRehydrate } from "./withRehydrate";
 
-const rehydrate = async (ctx: EventContext): Promise<void> => {
-  await hydrateProject(ctx.address);
-};
-
+// Las ofertas reflejan solo su propia fila (no rehidratan el proyecto) -> no usan
+// withRehydrate.
 const onOfferChanged = async (ctx: EventContext): Promise<void> => {
-  await hydrateSaleOffer(ctx.address, Number(ctx.args.offerId));
+  await syncService.hydrateSaleOffer(ctx.address, Number(ctx.args.offerId));
 };
 
-const onSaleExecuted = async (ctx: EventContext): Promise<void> => {
-  await hydrateProject(ctx.address);
-  await hydrateSaleOffer(ctx.address, Number(ctx.args.offerId));
-  await recordCertificate(ctx.address, "Completion", BigInt(ctx.meta.blockNumber));
-};
-
+// Inserta el reclamo ANTES de rehidratar (mismo motivo que Invested: la fila historica
+// debe persistirse aunque la rehidratacion falle) -> no usa withRehydrate.
 const onRefundClaimed = async (ctx: EventContext): Promise<void> => {
-  await insertClaim({
+  await claimRepository.insertClaim({
     projectAddress: ctx.address,
     investorWallet: String(ctx.args.investor),
     type: "Refund",
@@ -30,11 +25,12 @@ const onRefundClaimed = async (ctx: EventContext): Promise<void> => {
     logIndex: ctx.meta.index,
     block: BigInt(ctx.meta.blockNumber),
   });
-  await hydrateProject(ctx.address);
+  await syncService.hydrateProject(ctx.address);
 };
 
+// Registro historico del reparto reclamado (no rehidrata el proyecto).
 const onDistributionClaimed = async (ctx: EventContext): Promise<void> => {
-  await insertClaim({
+  await claimRepository.insertClaim({
     projectAddress: ctx.address,
     investorWallet: String(ctx.args.investor),
     type: "Distribution",
@@ -46,12 +42,15 @@ const onDistributionClaimed = async (ctx: EventContext): Promise<void> => {
 };
 
 export const saleHandlers: HandlerMap = {
-  SaleStageOpened: rehydrate,
+  SaleStageOpened: withRehydrate(),
   SaleOfferSubmitted: onOfferChanged,
   SaleOfferApproved: onOfferChanged,
   SaleOfferRefunded: onOfferChanged,
-  SaleExecuted: onSaleExecuted,
+  SaleExecuted: withRehydrate(async (ctx) => {
+    await syncService.hydrateSaleOffer(ctx.address, Number(ctx.args.offerId));
+    await developerService.recordCertificate(ctx.address, "Completion", BigInt(ctx.meta.blockNumber));
+  }),
   RefundClaimed: onRefundClaimed,
   DistributionClaimed: onDistributionClaimed,
-  CommissionClaimed: rehydrate,
+  CommissionClaimed: withRehydrate(),
 };

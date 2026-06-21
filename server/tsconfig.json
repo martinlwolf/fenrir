@@ -5,6 +5,11 @@
     "moduleResolution": "Node",
     "lib": ["ES2022"],
     "outDir": "dist",
+    // El typecheck incluye ../shared (ver include). Fijamos rootDir al directorio que
+    // contiene tanto src/ como shared/ para que ese import no quede "fuera del rootDir"
+    // (TS6059) cuando el editor le asigna shared/ a su propio tsconfig. tsc aca corre
+    // siempre con --noEmit, asi que no afecta la salida (el build real es esbuild).
+    "rootDir": "..",
     "rootDirs": ["src", "../shared"],
     "baseUrl": ".",
     "paths": {

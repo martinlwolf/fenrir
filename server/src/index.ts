@@ -1,23 +1,24 @@
 // Bootstrap del backend: levanta el servidor HTTP y arranca el listener de eventos
 // on-chain (que corre dentro del propio backend, constitution Principio I).
-import { env } from "./config/env";
 import { buildApp } from "./app";
-import { startListener, stopListener } from "./blockchain/listener";
-import { prisma } from "./daos/prisma";
+import { env } from "./config/env";
+import { logger } from "./config/logger";
+import { onChainListener } from "./ingestion/listener";
+import { prisma } from "./persistence/repositories/prisma";
 
 async function main(): Promise<void> {
   const app = buildApp();
 
   const server = app.listen(env.PORT, () => {
-    console.log(`[fenrir] backend escuchando en http://localhost:${env.PORT}`);
-    console.log(`[fenrir] docs en http://localhost:${env.PORT}/docs`);
+    logger.info(`backend escuchando en http://localhost:${env.PORT}`);
+    logger.info(`docs en http://localhost:${env.PORT}/docs`);
   });
 
-  startListener();
+  onChainListener.start();
 
   const shutdown = async (signal: string): Promise<void> => {
-    console.log(`[fenrir] recibido ${signal}, cerrando...`);
-    stopListener();
+    logger.info(`recibido ${signal}, cerrando...`);
+    onChainListener.stop();
     server.close();
     await prisma.$disconnect();
     process.exit(0);

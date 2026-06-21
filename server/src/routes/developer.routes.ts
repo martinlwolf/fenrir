@@ -1,10 +1,10 @@
 // Rutas de developer (identidad + reputacion + subida de verificacion).
 import { Router } from "express";
 import multer from "multer";
+import { registerReadPath } from "../config/docs/openapi";
+import { developerController } from "../controllers/developer.controller";
 import { asyncHandler } from "../middlewares/asyncHandler";
 import { walletAuth } from "../middlewares/walletAuth";
-import * as developerController from "../controllers/developer.controller";
-import { registerReadPath } from "../docs/openapi";
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024 } });
 

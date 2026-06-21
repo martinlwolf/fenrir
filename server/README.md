@@ -11,11 +11,13 @@ Arquitectura, decisiones y validación end-to-end:
 
 ## Arquitectura en capas
 
-`routes → controllers (thin) → services → models / daos`, más `middlewares`,
-`exceptions` (FenrirException centralizada), `blockchain` (provider, ABIs, listener,
-handlers) y `storage` (interfaz `ReportStorage` + impl local). Reglas: toda query vive
-en un DAO (única capa que toca Prisma); el backend **no** recalcula reglas de negocio
-que ya viven en los contratos — solo refleja y reporta.
+`routes → controllers (thin) → services → models / persistence (repositories)`, más
+`middlewares`, `exceptions` (FenrirException centralizada), `models/onchain` (provider,
+ABIs, enums), `ingestion` (listener + handlers + sincronización on-chain) y `storage`
+(interfaz `ReportStorage` + impl local). La capa de datos se llama **repositorio**
+(`persistence/repositories/`), no "DAO" — "DAO" nombra al órgano de gobernanza on-chain.
+Reglas: toda query vive en un repositorio (única capa que toca Prisma); el backend
+**no** recalcula reglas de negocio que ya viven en los contratos — solo refleja y reporta.
 
 ## Stack
 

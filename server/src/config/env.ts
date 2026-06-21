@@ -22,6 +22,17 @@ const envSchema = z.object({
   PUBLIC_BASE_URL: z.string().url().default("http://localhost:4000"),
 
   AUTH_NONCE_TTL_MINUTES: z.coerce.number().int().positive().default(10),
+
+  // --- Logging (pino, constitution Principio V) ---
+  LOG_LEVEL: z
+    .enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])
+    .default("info"),
+  // Salida legible para humanos (pino-pretty) en desarrollo; en prod dejar en false
+  // para emitir JSON de una linea por log.
+  LOG_PRETTY: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((v) => v === "true"),
 });
 
 export type Env = z.infer<typeof envSchema>;

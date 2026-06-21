@@ -2,7 +2,8 @@
 // uniforme { error, error_code, details }. Todo lo demas es 500.
 import type { NextFunction, Request, Response } from "express";
 import { ZodError } from "zod";
-import { FenrirException } from "../exceptions/FenrirException";
+import { logger } from "../config/logger";
+import { FenrirException } from "../exceptions/fernrir.exception";
 
 export function errorHandler(
   err: unknown,
@@ -29,6 +30,6 @@ export function errorHandler(
     return;
   }
 
-  console.error("[errorHandler] unhandled error:", err);
+  logger.error({ err }, "unhandled error");
   res.status(500).json({ error: "Internal Server Error", error_code: "INTERNAL" });
 }

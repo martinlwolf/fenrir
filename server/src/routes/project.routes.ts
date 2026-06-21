@@ -1,8 +1,8 @@
 // Rutas de proyectos (lectura, US1). Registra tambien sus paths en OpenAPI.
 import { Router } from "express";
+import { registerReadPath } from "../config/docs/openapi";
+import { projectController } from "../controllers/project.controller";
 import { asyncHandler } from "../middlewares/asyncHandler";
-import * as projectController from "../controllers/project.controller";
-import { registerReadPath } from "../docs/openapi";
 
 export const projectRouter = Router();
 

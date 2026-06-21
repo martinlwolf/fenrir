@@ -1,16 +1,26 @@
 <!--
 Sync Impact Report
-- Version change: 1.0.0 → 1.1.0
+- Version change: 1.3.0 → 1.4.0
 - Modified principles:
-  - II (body): clarified that `shared/` must never carry business logic, only shape
-    contracts — closes a leak vector introduced by adding `shared/`.
-  - III (body): added a "Shared contracts" bullet for `shared/` (Zod schemas,
-    constants, types reused by both `client/` and `server/`).
+  - V (env-vars bullet): every module that needs environment variables MUST read,
+    validate and export them in a single dedicated config module per module/service
+    (e.g. `server/src/config/env.ts`), and the rest of that module's code MUST import
+    from it — never touch `process.env` / `import.meta.env` directly outside that one
+    file. Validation is fail-fast (Zod parse at load).
+- Modified sections:
+  - "Governance" → "Compliance review": added the read-only auditor agent
+    `auditor-env-config` (skill `env-config-centralization`) that verifies the
+    single-config-module rule and reports violations.
 - Added sections: none (existing sections expanded)
 - Removed sections: none
-- Folder naming resolved: repo folders are `client/` and `server/` (confirmed by
-  project owner) — all path references below use that, the prior TODO about
-  `frontend/`/`backend/` naming is dropped.
+- Prior history (1.2.0 → 1.3.0): added a "Logging" bullet to Principle V — all
+  logging goes through a single configured logger (pino), never `console.*`, in both
+  `server/` and `client/`, with log behaviour (at minimum the level) read from `.env`.
+- Prior history (1.1.0 → 1.2.0): added Principle III "Per-folder dependency
+  isolation" (no root manifest; each top-level folder self-contained) and annotated
+  the repo-structure tree accordingly.
+- Prior history (1.0.0 → 1.1.0): clarified II/III about `shared/` carrying only
+  shape contracts, never business logic, and resolved `client/`/`server/` naming.
 - Templates requiring updates:
   - .specify/templates/plan-template.md ✅ compatible as-is
   - .specify/templates/spec-template.md ✅ compatible as-is
@@ -73,8 +83,21 @@ backend, frontend) and drifting out of sync between them.
   `client/` and `server/` are defined once in `shared/` and imported by both sides —
   neither side redefines or duplicates them locally. `shared/` carries shape/format
   contracts and constants only, never business-rule logic (see Principle II).
+- **Per-folder dependency isolation**: the repo root carries NO dependencies — there
+  is no root `package.json`, no root lockfile, and no root `node_modules`, and the
+  repo MUST NOT be wired as an npm/yarn/pnpm workspace that hoists deps to the root.
+  Each top-level folder (`shared/`, `server/`, `client/`, `contracts/`) is
+  self-contained: its own `package.json`, its own lockfile, its own installed
+  `node_modules`. **Dependencies may be duplicated across folders; code may not** —
+  e.g. `zod` is a real installed dependency of `shared/`, `server/`, and `client/`,
+  but the Zod schemas/constants/types themselves are written once in `shared/` and
+  imported by `client/` and `server/` (never re-declared). The sharing is by import,
+  not by copy.
 
-**Rationale**: one place to change behavior, one place to look when debugging.
+**Rationale**: one place to change behavior, one place to look when debugging — while
+keeping every folder independently installable, buildable, and deployable (each
+service builds from its own folder, as the per-service Dockerfiles already assume)
+without a fragile root that couples them all together.
 
 ### IV. Contracts Are Source of Truth, Deployed Manually
 
@@ -93,6 +116,24 @@ not a gap to silently "fix" by adding tooling.
 - TypeScript across frontend and backend; no `any` without explicit justification.
 - Environment variables are always read from `.env`, never hardcoded; each service
   keeps an up-to-date `.env.example`.
+- **Single env-config module per module.** Every module/service that consumes
+  environment variables MUST read, validate and export them from **one dedicated
+  config module** — e.g. `server/src/config/env.ts` for the backend, an equivalent
+  single file for `client/` or any other top-level folder that needs config. That
+  module is the only place allowed to touch the raw environment (`process.env` on the
+  backend, `import.meta.env` on the frontend); the rest of the code imports the typed,
+  validated values from it and MUST NOT read the raw environment directly. Validation
+  is **fail-fast**: the config module parses/validates at load (Zod) and throws if a
+  required variable is missing or malformed, so a misconfigured service never boots in
+  a half-valid state. A module that uses no env vars needs no such file.
+- **Logging** goes through a single configured logger — **pino** — never `console.*`.
+  Both `server/` and `client/` log through pino (its Node build on the backend, its
+  browser build on the frontend), wrapped in one logger module per service so the
+  rest of the code imports that module instead of touching pino or `console`
+  directly. Log behaviour is configurable from `.env` like every other config — at
+  minimum the level (e.g. backend `LOG_LEVEL`, plus an optional `LOG_PRETTY` for
+  human-readable dev output) — never hardcoded. `console.log`/`console.error` MUST
+  NOT appear in committed application code.
 - Contracts, events, and functions follow the project's existing naming vocabulary —
   `PascalCase` for contracts/events, `camelCase` for functions (e.g. `FenrirFactory`,
   `declareComplete`) — so code matches the vocabulary used in design discussions.
@@ -112,12 +153,15 @@ a frontend label all refer to "the same thing" without a lookup table.
 
 Repository structure:
 
+The repo root holds no manifest and no dependencies (see Principle III) — every folder
+below carries and installs its own `package.json` + `node_modules`:
+
 ```
-fenrir/
-├── client/                 # React + TSX + Tailwind + shadcn/ui
-├── server/                 # Express + TypeScript
-├── shared/                 # Zod schemas, constants, and types shared by client/ and server/
-├── contracts/              # .sol — source of truth, exported to Remix
+fenrir/                     # NO root package.json / lockfile / node_modules — not a workspace
+├── client/                 # React + TSX + Tailwind + shadcn/ui — own package.json + deps
+├── server/                 # Express + TypeScript — own package.json + deps
+├── shared/                 # Zod schemas, constants, types imported by client/ and server/ — own package.json + deps
+├── contracts/              # .sol — source of truth, exported to Remix — own package.json (OpenZeppelin, reference only)
 ├── business_rules/         # business rules (roles, project types, tokens, milestones...)
 ├── docker-compose.yml
 ├── CLAUDE.md
@@ -142,7 +186,8 @@ CLAUDE.md — that is where business decisions get discussed and written down.
 - Local: `docker compose up --build` brings up `client`, `server`, and `postgres` on
   one local network. Minimum env vars — Backend: `DATABASE_URL` (pooled), `DIRECT_URL`
   (direct, for Prisma migrations), `PORT`, `SEPOLIA_RPC_URL`, deployed contract
-  addresses. Frontend: `VITE_API_URL`, `VITE_SEPOLIA_CHAIN_ID`.
+  addresses, `LOG_LEVEL` (optionally `LOG_PRETTY`). Frontend: `VITE_API_URL`,
+  `VITE_SEPOLIA_CHAIN_ID`.
 - Deploy: frontend → Vercel (connected to `client/`); backend → Render (connected to
   `server/`, running that service's Dockerfile).
 - The production database runs separately from the app containers (Render Postgres
@@ -165,7 +210,10 @@ CLAUDE.md — that is where business decisions get discussed and written down.
 - **Compliance review**: the agents defined in `.claude/agents/` (`developer`,
   `frontend`, `database`) MUST apply the principles above before writing or reviewing
   code in their domain. `analista-funcional` audits compliance with `business_rules/`
-  separately and is not a check against this constitution. Use `CLAUDE.md` for the
+  separately and is not a check against this constitution. The read-only auditor
+  `auditor-env-config` (skill `env-config-centralization`) verifies the
+  single-env-config-module rule of Principle V and reports any code that reads the raw
+  environment outside its module's dedicated config file. Use `CLAUDE.md` for the
   short project overview and pointers; it does not duplicate what is fixed here.
 
-**Version**: 1.1.0 | **Ratified**: 2026-06-21 | **Last Amended**: 2026-06-21
+**Version**: 1.4.0 | **Ratified**: 2026-06-21 | **Last Amended**: 2026-06-21

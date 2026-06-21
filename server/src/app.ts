@@ -4,11 +4,11 @@
 import express, { type Express } from "express";
 import path from "node:path";
 import swaggerUi from "swagger-ui-express";
+import { buildOpenApiDocument } from "./config/docs/openapi";
 import { env } from "./config/env";
 import { errorHandler } from "./middlewares/errorHandler";
+import { ingestionRepository } from "./persistence/repositories/ingestion.repository";
 import { buildApiRouter } from "./routes";
-import { buildOpenApiDocument } from "./docs/openapi";
-import { getCursor } from "./daos/ingestion.dao";
 
 export function buildApp(): Express {
   const app = express();
@@ -21,7 +21,7 @@ export function buildApp(): Express {
 
   // Health: liveness + estado del listener (ultimo bloque procesado).
   app.get("/health", async (_req, res) => {
-    const lastBlock = await getCursor("sepolia:main");
+    const lastBlock = await ingestionRepository.getCursor("sepolia:main");
     res.json({
       status: "ok",
       listener: { lastProcessedBlock: lastBlock ? lastBlock.toString() : null },

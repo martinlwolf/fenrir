@@ -1,9 +1,0 @@
-{
-  "name": "fenrir",
-  "version": "0.1.0",
-  "private": true,
-  "description": "Fenrir — monorepo (server + shared; client se suma en su feature)",
-  "workspaces": [
-    "server"
-  ]
-}

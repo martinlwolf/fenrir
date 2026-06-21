@@ -2,7 +2,7 @@
 // parseados del evento + metadata de trazabilidad on-chain, y solo persiste lo que
 // el evento comunica (FR-020: el backend no recalcula reglas de negocio).
 import type { Result } from "ethers";
-import type { OnChainEventMeta } from "../../services/ingestion.service";
+import type { OnChainEventMeta } from "../ingestion.service";
 
 export interface EventContext {
   args: Result;

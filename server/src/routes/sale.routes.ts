@@ -1,8 +1,8 @@
 // Rutas de venta y reparto (lectura, US5).
 import { Router } from "express";
+import { registerReadPath } from "../config/docs/openapi";
+import { saleController } from "../controllers/sale.controller";
 import { asyncHandler } from "../middlewares/asyncHandler";
-import * as saleController from "../controllers/sale.controller";
-import { registerReadPath } from "../docs/openapi";
 
 export const saleRouter = Router();
 

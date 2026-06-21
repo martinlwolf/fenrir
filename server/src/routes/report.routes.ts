@@ -2,11 +2,11 @@
 // lectura es publica (FR-008).
 import { Router } from "express";
 import multer from "multer";
+import { registerReadPath } from "../config/docs/openapi";
+import { reportController } from "../controllers/report.controller";
 import { asyncHandler } from "../middlewares/asyncHandler";
-import { walletAuth } from "../middlewares/walletAuth";
 import { requireDeveloper } from "../middlewares/requireDeveloper";
-import * as reportController from "../controllers/report.controller";
-import { registerReadPath } from "../docs/openapi";
+import { walletAuth } from "../middlewares/walletAuth";
 
 // Archivos en memoria: el hash se calcula sobre el buffer y luego se delega al
 // ReportStorage. Limite por archivo pensado para una demo, no para produccion.

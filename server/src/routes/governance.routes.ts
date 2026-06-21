@@ -1,8 +1,8 @@
 // Rutas de gobernanza (lectura, US3).
 import { Router } from "express";
+import { registerReadPath } from "../config/docs/openapi";
+import { governanceController } from "../controllers/governance.controller";
 import { asyncHandler } from "../middlewares/asyncHandler";
-import * as governanceController from "../controllers/governance.controller";
-import { registerReadPath } from "../docs/openapi";
 
 export const governanceRouter = Router();
 

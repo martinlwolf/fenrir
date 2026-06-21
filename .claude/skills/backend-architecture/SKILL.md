@@ -1,6 +1,6 @@
 ---
 name: backend-architecture
-description: Aplica la arquitectura en capas del backend de Fenrir (Thin Controllers → Services → Models/DAOs, Middlewares, FenrirException) al crear o modificar código en server/ — rutas/controllers de Express, lógica de negocio, queries a la base de datos, excepciones, middlewares, validación con Zod o documentación de la API. Define también la convención de `shared/` para Zod schemas, constantes y tipos reusados por client/. Funciona también como registry: para tipos avanzados de TypeScript al generar interfaces, DTOs o tipos de request/response, registra `typescript-advanced-types`; para `schema.prisma`, migraciones, índices o pooling de conexiones, registra `database`. Usar también en modo revisión para detectar violaciones de capas en código backend existente (SQL u ORM fuera de un DAO, lógica de negocio en un controller, IDs en vez de objetos, excepciones casi duplicadas, falta de manejo de errores centralizado, o lógica de negocio filtrada a `shared/`).
+description: Aplica la arquitectura en capas del backend de Fenrir (Thin Controllers → Services → Models/DAOs, Middlewares, FenrirException) al crear o modificar código en server/ — rutas/controllers de Express, lógica de negocio, queries a la base de datos, excepciones, middlewares, validación con Zod o documentación de la API. Define también la convención de `shared/` para Zod schemas, constantes y tipos reusados por client/. Funciona también como registry: para tipos avanzados de TypeScript al generar interfaces, DTOs o tipos de request/response, registra `typescript-advanced-types`; para `schema.prisma`, migraciones, índices o pooling de conexiones, registra `database`; para aplicar o evaluar patrones de diseño (Gang of Four) en services, models, factories o middlewares, registra `design-patterns`. Usar también en modo revisión para detectar violaciones de capas en código backend existente (SQL u ORM fuera de un DAO, lógica de negocio en un controller, IDs en vez de objetos, excepciones casi duplicadas, falta de manejo de errores centralizado, o lógica de negocio filtrada a `shared/`).
 ---
 
 # Arquitectura del backend de Fenrir
@@ -8,19 +8,24 @@ description: Aplica la arquitectura en capas del backend de Fenrir (Thin Control
 Backend en Express + TypeScript (ver `.specify/memory/constitution.md`). Esta skill
 define las 6 capas del backend y las reglas de cada una. El objetivo: que la lógica de
 negocio nunca se filtre a un controller (ni a `shared/`), que las queries nunca se
-filtren fuera de un DAO, y que los errores se manejen siempre de la misma forma.
+filtren fuera de un repositorio, y que los errores se manejen siempre de la misma forma.
 
 ## Registry de skills
 
 | Skill | Para qué sirve |
 |---|---|
-| [`typescript-advanced-types`](../typescript-advanced-types/SKILL.md) | Generics, conditional types, mapped types, template literals y utility types — invocarlo al generar interfaces, DTOs, tipos de request/response o cualquier tipo no trivial en `models/`, `daos/`, `schemas/` o `services/` |
-| [`database`](../database/SKILL.md) | `schema.prisma`, migraciones, índices, pooling de conexiones y preparación para la migración a Supabase — invocarlo para cualquier cambio en `daos/` o en el schema que vaya más allá de una query simple |
+| [`typescript-advanced-types`](../typescript-advanced-types/SKILL.md) | Generics, conditional types, mapped types, template literals y utility types — invocarlo al generar interfaces, DTOs, tipos de request/response o cualquier tipo no trivial en `models/`, `persistence/repositories/`, `schemas/` o `services/` |
+| [`database`](../database/SKILL.md) | `schema.prisma`, migraciones, índices, pooling de conexiones y preparación para la migración a Supabase — invocarlo para cualquier cambio en `persistence/repositories/` o en el schema que vaya más allá de una query simple |
+| [`design-patterns`](../design-patterns/SKILL.md) | Los 26 patrones de diseño Gang of Four (creacionales, estructurales, de comportamiento) — invocarlo al introducir un patrón (ej. un Strategy para variar la lógica de un service, un Factory para construir models, un Observer para el listener de eventos on-chain), al elegir entre patrones que compiten, o al revisar un patrón ya aplicado. El agente `analista-patrones` se apoya en esta misma skill para sugerir dónde aplicarlos |
 
 Un `interface` simple de dos o tres campos no lo necesita. Un tipo condicional, un
-mapped type, o un genérico reutilizable entre DAOs/services sí — ahí invocar
+mapped type, o un genérico reutilizable entre repositorios/services sí — ahí invocar
 `typescript-advanced-types` directamente. Para todo lo que toca `schema.prisma`,
 migraciones, índices o configuración de conexión, invocar `database` directamente.
+Nota: en este proyecto los DAOs de datos se llaman **repositorios** — "DAO" queda
+reservado para el órgano de gobernanza on-chain (ver sección 3).
+Cuando la solución pide un patrón de diseño (o el agente `analista-patrones` señala que
+uno aplica), invocar `design-patterns` antes de improvisar la estructura a mano.
 
 ## Estructura de carpetas sugerida
 
@@ -29,7 +34,8 @@ server/src/
 ├── controllers/      # Thin Controllers
 ├── services/          # Services
 ├── models/             # Models (objetos de negocio)
-├── daos/                 # DAOs (única capa que toca el ORM)
+├── persistence/
+│   └── repositories/    # Repositories (única capa que toca el ORM) — *.repository.ts
 ├── middlewares/        # auth, error handling, formato de respuesta, roles
 ├── exceptions/          # FenrirException + subclases
 ├── schemas/             # esquemas Zod que NO comparte el frontend (solo este servicio)
@@ -61,7 +67,7 @@ query/params/body). Responsabilidades, nada más:
 
 **No deben:**
 - Contener reglas de negocio (`if` que decida algo del dominio).
-- Importar un DAO o el cliente del ORM directamente.
+- Importar un repositorio o el cliente del ORM directamente.
 - Acceder a APIs externas — **excepción**: si un *service* necesita consumir una API
   externa (ej. un RPC de Sepolia vía ethers.js, un servicio de terceros), esa llamada
   vive en el service, no en el controller. Es la única capa, aparte del controller,
@@ -87,7 +93,7 @@ vive en los propios models, no en el service que los orquesta.
 
 **Regla clave:** si un model recibe algo por parámetro que es una entidad relacionada,
 recibe el **objeto**, no su id (`assignDeveloper(developer: Developer)`, nunca
-`assignDeveloper(developerId: number)`). Resolver el id a objeto es trabajo del DAO o
+`assignDeveloper(developerId: number)`). Resolver el id a objeto es trabajo del repositorio o
 del service, antes de llamar al model.
 
 ```typescript
@@ -108,14 +114,21 @@ export class Project {
 }
 ```
 
-## 3. DAOs (`daos/`) — única capa que toca el ORM
+## 3. Repositories (`persistence/repositories/`) — única capa que toca el ORM
+
+> **Por qué "repository" y no "DAO":** en Fenrir "DAO" ya nombra el órgano de gobernanza
+> on-chain (los tenedores de FDT que votan los hitos, ver `business_rules/roles.md`).
+> Para no mezclar conceptos, la capa de acceso a datos se llama **repositorio**
+> (`XRepository` / `xRepository`, archivos `*.repository.ts` bajo
+> `server/src/persistence/repositories/`).
 
 Abstraen el ORM, que en este proyecto es **Prisma** (ver `.specify/memory/constitution.md`). **Toda**
-query vive en un DAO; no puede existir una llamada a Prisma en ningún otro archivo. Un
-DAO recibe/devuelve **entidades de `models/`**, nunca filas crudas del ORM.
+query vive en un repositorio; no puede existir una llamada a Prisma en ningún otro
+archivo. Un repositorio recibe/devuelve **entidades de `models/`**, nunca filas crudas
+del ORM.
 
 ```typescript
-// daos/project.dao.ts
+// persistence/repositories/project.repository.ts
 export async function findById(id: number): Promise<Project | null> {
   const row = await prisma.project.findUnique({
     where: { id },
@@ -127,19 +140,20 @@ export async function findById(id: number): Promise<Project | null> {
 
 ## 4. Services (`services/`) — terminan de aplicar la lógica
 
-Orquestan: hablan con DAOs, con Models y a veces con otros Services. Acá vive el flujo
-completo de un caso de uso (ej. "declarar un hito": buscar el proyecto vía DAO, pedirle
-al Model que aplique la regla, persistir vía DAO, notificar a otro service).
+Orquestan: hablan con repositorios, con Models y a veces con otros Services. Acá vive el
+flujo completo de un caso de uso (ej. "declarar un hito": buscar el proyecto vía
+repositorio, pedirle al Model que aplique la regla, persistir vía repositorio, notificar
+a otro service).
 
 ```typescript
 // services/milestone.service.ts
 export async function declare(projectId: number, input: DeclareMilestoneInput) {
-  const project = await projectDao.findById(projectId);
+  const project = await projectRepository.findById(projectId);
   if (!project) throw new NotFoundException("Project not found");
 
   const milestone = project.declareNextMilestone(input.reportUrl, input.reportHash);
 
-  await milestoneDao.save(milestone);
+  await milestoneRepository.save(milestone);
   await blockchainService.emitMilestoneDeclared(milestone);
 
   return milestone;
@@ -245,9 +259,9 @@ por separado. Servir el spec resultante con `swagger-ui-express` en una ruta tip
 
 ## Checklist de revisión
 
-- [ ] ¿El controller importa un DAO o el cliente del ORM directamente? → mover al service.
+- [ ] ¿El controller importa un repositorio o el cliente del ORM directamente? → mover al service.
 - [ ] ¿Hay un `if` de regla de negocio dentro de un controller? → mover a Model o Service.
-- [ ] ¿Una query vive fuera de `daos/`? → moverla a un DAO.
+- [ ] ¿Una query vive fuera de `persistence/repositories/`? → moverla a un repositorio.
 - [ ] ¿Un Model recibe un id donde podría recibir el objeto relacionado? → cambiar la firma.
 - [ ] ¿Se lanza un `Error` plano o una excepción nueva casi idéntica a una existente? → usar/heredar de `FenrirException`.
 - [ ] ¿El `errorHandler` conoce los `error_code` nuevos que se están introduciendo?

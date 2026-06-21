@@ -1,6 +1,12 @@
 {
   "version": 1,
   "skills": {
+    "design-patterns": {
+      "source": "krzysztofsurdy/code-virtuoso",
+      "sourceType": "github",
+      "skillPath": "skills/knowledge/design-patterns/SKILL.md",
+      "computedHash": "73514bd2869de6e7ac328edcc753c437f7084f2fc54cbdd4fa1f44a1ca39b83a"
+    },
     "docker-expert": {
       "source": "sickn33/antigravity-awesome-skills",
       "sourceType": "github",

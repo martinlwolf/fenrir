@@ -75,7 +75,7 @@ Cada llamada a la API vive en una función dentro de `src/services/` (ej.
 con `declareMilestone(...)`), y los componentes consumen esas funciones — nunca el
 cliente Axios.
 
-Es la misma idea de capas que ya separa controllers de DAOs en el backend (ver skill
+Es la misma idea de capas que ya separa controllers de repositorios en el backend (ver skill
 `backend-architecture`): el componente no sabe que la llamada es HTTP, solo invoca una
 función con nombre de dominio.
 

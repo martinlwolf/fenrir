@@ -1,20 +1,24 @@
 // Handlers de eventos de ciclo de vida del proyecto. Solo reflejan estado: ante cada
 // evento releen el estado autoritativo del contrato (hydrateProject) y, donde
 // corresponde, registran la fila hija (p.ej. la inversion). No deciden nada (FR-020).
-import { insertInvestment } from "../../daos/investment.dao";
-import { hydrateProject } from "../../services/sync.service";
-import { recordCertificate } from "../../services/developer.service";
+import { investmentRepository } from "../../persistence/repositories/investment.repository";
+import { developerService } from "../../services/developer.service";
+import { syncService } from "../sync.service";
 import type { EventContext, HandlerMap } from "./types";
+import { withRehydrate } from "./withRehydrate";
 
-// Emitido por FenrirFactory: nace un proyecto -> hidratar su estado completo.
+// Emitido por FenrirFactory: nace un proyecto -> hidratar su estado completo (con el
+// bloque de creacion). Target y firma propios: no encaja en withRehydrate.
 const onProjectCreated = async (ctx: EventContext): Promise<void> => {
   const projectAddress = String(ctx.args.project);
-  await hydrateProject(projectAddress, BigInt(ctx.meta.blockNumber));
+  await syncService.hydrateProject(projectAddress, BigInt(ctx.meta.blockNumber));
 };
 
-// Emitido por una instancia de FenrirProject.
+// Emitido por una instancia de FenrirProject. Inserta la inversion ANTES de rehidratar
+// (orden deliberado: applyOnce ya marco el evento, asi que la fila hija debe persistirse
+// aunque la rehidratacion falle) -> no usa withRehydrate.
 const onInvested = async (ctx: EventContext): Promise<void> => {
-  await insertInvestment({
+  await investmentRepository.insertInvestment({
     projectAddress: ctx.address,
     investorWallet: String(ctx.args.investor),
     amount: ctx.args.amount as bigint,
@@ -22,23 +26,7 @@ const onInvested = async (ctx: EventContext): Promise<void> => {
     logIndex: ctx.meta.index,
     block: BigInt(ctx.meta.blockNumber),
   });
-  await hydrateProject(ctx.address);
-};
-
-const rehydrate = async (ctx: EventContext): Promise<void> => {
-  await hydrateProject(ctx.address);
-};
-
-// Civico: el ultimo hito de obra completa el proyecto -> certificado de finalizacion.
-const onProjectCompleted = async (ctx: EventContext): Promise<void> => {
-  await hydrateProject(ctx.address);
-  await recordCertificate(ctx.address, "Completion", BigInt(ctx.meta.blockNumber));
-};
-
-// Cualquier cancelacion -> certificado de proyecto fallido.
-const onProjectCancelled = async (ctx: EventContext): Promise<void> => {
-  await hydrateProject(ctx.address);
-  await recordCertificate(ctx.address, "Failure", BigInt(ctx.meta.blockNumber));
+  await syncService.hydrateProject(ctx.address);
 };
 
 export const projectHandlers: { factory: HandlerMap; project: HandlerMap } = {
@@ -47,10 +35,16 @@ export const projectHandlers: { factory: HandlerMap; project: HandlerMap } = {
   },
   project: {
     Invested: onInvested,
-    ArbiterElectionStarted: rehydrate,
-    FundingRoundClosed: rehydrate,
-    ArbiterElected: rehydrate,
-    ProjectCancelled: onProjectCancelled,
-    ProjectCompleted: onProjectCompleted,
+    ArbiterElectionStarted: withRehydrate(),
+    FundingRoundClosed: withRehydrate(),
+    ArbiterElected: withRehydrate(),
+    // Cualquier cancelacion -> certificado de proyecto fallido.
+    ProjectCancelled: withRehydrate((ctx) =>
+      developerService.recordCertificate(ctx.address, "Failure", BigInt(ctx.meta.blockNumber)),
+    ),
+    // Civico: el ultimo hito de obra completa el proyecto -> certificado de finalizacion.
+    ProjectCompleted: withRehydrate((ctx) =>
+      developerService.recordCertificate(ctx.address, "Completion", BigInt(ctx.meta.blockNumber)),
+    ),
   },
 };
