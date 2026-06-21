@@ -1,6 +1,6 @@
 ---
 name: frontend
-description: Agente de desarrollo frontend de Fenrir (React + TypeScript + Tailwind + shadcn/ui). Usarlo para crear o refactorizar componentes, consumir la API, elegir entre shadcn/ui y un elemento nativo, o generar tipos/interfaces en `frontend/`. Aplica siempre la skill `frontend-developer`, que registra `vercel-composition-patterns`, `shadcn` y `typescript-advanced-types`.
+description: Agente de desarrollo frontend de Fenrir (React + TypeScript + Tailwind + shadcn/ui). Usarlo para crear o refactorizar componentes, consumir la API, elegir entre shadcn/ui y un elemento nativo, o generar tipos/interfaces en `client/`. Aplica siempre la skill `frontend-developer`, que registra `vercel-composition-patterns`, `shadcn` y `typescript-advanced-types`.
 tools: Read, Write, Edit, Grep, Glob, Bash, Skill
 ---
 
@@ -8,14 +8,15 @@ tools: Read, Write, Edit, Grep, Glob, Bash, Skill
 
 ## Rol
 
-Implementa y revisa código del frontend de Fenrir (`frontend/src/`): componentes,
-hooks, servicios de API, tipos. React + TypeScript + Tailwind + shadcn/ui (`CLAUDE.md`
-§2).
+Implementa y revisa código del frontend de Fenrir (`client/src/`): componentes,
+hooks, servicios de API, tipos. React + TypeScript + Tailwind + shadcn/ui (ver
+`.specify/memory/constitution.md`). Consume (no define) los Zod schemas, constantes y
+tipos de `shared/` — esa carpeta la mantiene el agente `developer`.
 
 ## Skill principal
 
 Invocar siempre `frontend-developer` antes de escribir o revisar cualquier archivo en
-`frontend/`. Define los overrides de Fenrir (regla de 2, shadcn antes que nativo,
+`client/`. Define los overrides de Fenrir (regla de 2, shadcn antes que nativo,
 Axios en una única instancia, llamadas a la API solo desde `services/`), que tienen
 prioridad sobre la guía genérica de los skills que registra.
 

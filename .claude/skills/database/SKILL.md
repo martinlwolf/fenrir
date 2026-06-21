@@ -7,14 +7,14 @@ description: Capa de datos del backend de Fenrir (Prisma + PostgreSQL). Usar al 
 
 ## Capa que cubre
 
-`schema.prisma`, migraciones y los DAOs (`backend/src/daos/`) — la única capa que
+`schema.prisma`, migraciones y los DAOs (`server/src/daos/`) — la única capa que
 conoce el ORM (ver skill `backend-architecture`, sección DAOs). Esta skill no la
 reemplaza: la complementa con el detalle específico de Prisma + Postgres.
 
 ## Contexto del proyecto
 
 - **Hoy:** PostgreSQL administrado (Render Postgres o equivalente), accedido vía
-  Prisma (`CLAUDE.md` §2/§8).
+  Prisma (ver `.specify/memory/constitution.md`).
 - **Mañana:** migración planeada a Supabase. El objetivo de esta skill es que ese
   cambio sea, en lo posible, solo de variables de entorno — no de código ni de schema.
 
@@ -53,7 +53,7 @@ datasource db {
   a Supabase el cambio sea solo pisar los valores en `.env`, sin tocar `schema.prisma`
   ni el código.
 - Mantener `DATABASE_URL` y `DIRECT_URL` en el `.env.example` del backend, aunque hoy
-  compartan valor (`CLAUDE.md` §4).
+  compartan valor (ver `.specify/memory/constitution.md`, Development Workflow).
 
 ## Flujo de trabajo
 
@@ -82,7 +82,7 @@ datasource db {
 - No escribir SQL crudo ni llamar a Prisma fuera de `daos/` (regla de
   `backend-architecture`).
 - No hardcodear `DATABASE_URL`/`DIRECT_URL` ni ninguna connection string — siempre vía
-  `.env` (`CLAUDE.md` §8).
+  `.env` (ver `.specify/memory/constitution.md`, Principio V).
 - No diseñar el schema o las queries solo para que funcionen hoy contra Render
   Postgres si eso obliga a reescribirlas en la migración a Supabase — pensar los dos
   destinos a la vez.

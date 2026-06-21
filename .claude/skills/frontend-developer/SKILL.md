@@ -1,6 +1,6 @@
 ---
 name: frontend-developer
-description: Punto de entrada para trabajo de frontend en Fenrir (React + TypeScript + Tailwind + shadcn/ui). Funciona como registry de los skills de patrones de frontend disponibles -- `vercel-composition-patterns` para composición de componentes (boolean props, compound components, context providers, render props, React 19), `shadcn` para agregar/buscar/componer componentes de shadcn/ui, y `typescript-advanced-types` para generics, conditional types y mapped types al generar interfaces o tipos -- y define los overrides propios de este proyecto, que tienen prioridad sobre la guía genérica de esos skills cuando entran en conflicto: regla de 2 para abstraer componentes repetidos, prioridad de shadcn/ui sobre elementos nativos, una única instancia de Axios centralizada, y toda llamada a la API abstraída en funciones dentro de `services/`. Usar para cualquier tarea de frontend en `frontend/`: crear o refactorizar componentes, decidir si abstraer JSX repetido, elegir entre shadcn/ui y un elemento nativo, generar tipos/interfaces, consumir la API desde el frontend, o revisar código de frontend.
+description: Punto de entrada para trabajo de frontend en Fenrir (React + TypeScript + Tailwind + shadcn/ui). Funciona como registry de los skills de patrones de frontend disponibles -- `vercel-composition-patterns` para composición de componentes (boolean props, compound components, context providers, render props, React 19), `shadcn` para agregar/buscar/componer componentes de shadcn/ui, y `typescript-advanced-types` para generics, conditional types y mapped types al generar interfaces o tipos -- y define los overrides propios de este proyecto, que tienen prioridad sobre la guía genérica de esos skills cuando entran en conflicto: regla de 2 para abstraer componentes repetidos, prioridad de shadcn/ui sobre elementos nativos, una única instancia de Axios centralizada, toda llamada a la API abstraída en funciones dentro de `services/`, y reusar (nunca duplicar) los Zod schemas/constantes/tipos de `shared/`. Usar para cualquier tarea de frontend en `client/`: crear o refactorizar componentes, decidir si abstraer JSX repetido, elegir entre shadcn/ui y un elemento nativo, generar tipos/interfaces, consumir la API desde el frontend, o revisar código de frontend.
 ---
 
 # Frontend Developer (Fenrir)
@@ -43,7 +43,7 @@ tercera ocurrencia para justificar el refactor.
 Para cualquier elemento de UI, el orden de preferencia es:
 
 1. **Componente de shadcn/ui** que cubra el caso (`Button`, `Input`, `Select`,
-   `Dialog`, etc. — ver `CLAUDE.md` §8).
+   `Dialog`, etc. — ver `.specify/memory/constitution.md`, Principio III).
 2. Solo si shadcn no cubre la funcionalidad o el estilo necesario, crear un **wrapper
    component** propio (ej. `components/ui-custom/AddressInput.tsx`) que encapsule el
    elemento nativo o la librería externa puntual.
@@ -56,7 +56,7 @@ especial — no esparcir el elemento nativo crudo por las pantallas.
 ### Axios: una única instancia centralizada
 
 Una sola instancia de Axios, creada en un único lugar (ej. `src/lib/api.ts`) y
-reutilizada en todo el frontend (`CLAUDE.md` §8). No instanciar `axios.create()`
+reutilizada en todo el frontend (ver `.specify/memory/constitution.md`, Principio III). No instanciar `axios.create()`
 suelto en componentes, hooks, ni en cada archivo de `services/`.
 
 Si un caso puntual parece necesitar otra configuración (otra `baseURL`, headers
@@ -78,6 +78,17 @@ cliente Axios.
 Es la misma idea de capas que ya separa controllers de DAOs en el backend (ver skill
 `backend-architecture`): el componente no sabe que la llamada es HTTP, solo invoca una
 función con nombre de dominio.
+
+### Tipos, schemas y constantes compartidas: consumir `shared/`, no redefinir
+
+Si el mismo Zod schema, constante (enums de estado, límites) o tipo ya existe en
+`shared/` porque el backend también lo usa, importarlo desde ahí — nunca declarar una
+copia local en `client/` "por las dudas" o porque es más rápido que importar. Esto
+incluye la validación de formato que el frontend tiene permitido hacer (ver
+constitution Principio II): se hace con el schema de `shared/`, no con uno nuevo. Si
+hace falta un tipo o constante que el backend no expone todavía, es trabajo del
+agente `developer` agregarlo a `shared/`, no del agente `frontend` duplicarlo
+localmente.
 
 ## Cómo usar este skill
 

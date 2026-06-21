@@ -1,6 +1,6 @@
 ---
 name: business-rules-compliance
-description: Audita si el código de contracts/, backend/ y frontend/ implementa correctamente las decisiones de negocio de Fenrir documentadas en business_rules/ (fondeo, custodia y liberación de tranches, hito 0 y elección/pérdida del rol de árbitro, ciclo de vida de hitos, hito final de venta, comisión y penalización, casos borde, identidad del developer, tokens FDT/ERC-721/ERC-1155, rol de comprador). Usar después de escribir o modificar smart contracts o lógica de negocio relacionada, antes de un PR, o cuando se pida explícitamente revisar/auditar/validar que el código cumple las decisiones de negocio. Siempre releer business_rules/ completo al momento de auditar -- no asumir su contenido de memoria.
+description: Audita si el código de contracts/, server/, client/ y shared/ implementa correctamente las decisiones de negocio de Fenrir documentadas en business_rules/ (fondeo, custodia y liberación de tranches, hito 0 y elección/pérdida del rol de árbitro, ciclo de vida de hitos, hito final de venta, comisión y penalización, casos borde, identidad del developer, tokens FDT/ERC-721/ERC-1155, rol de comprador). Usar después de escribir o modificar smart contracts o lógica de negocio relacionada, antes de un PR, cuando se pida explícitamente revisar/auditar/validar que el código cumple las decisiones de negocio, o como consulta de respaldo para `/speckit-clarify` sobre preguntas de negocio. Siempre releer business_rules/ completo al momento de auditar -- no asumir su contenido de memoria.
 ---
 
 # Auditoría de decisiones de negocio (Fenrir)
@@ -14,8 +14,9 @@ una revisión de estilo ni de arquitectura — para eso están los skills
 `backend-architecture` y `frontend-developer`. Esto es específicamente sobre si el
 *comportamiento* implementado coincide con lo que el equipo decidió.
 
-`CLAUDE.md` (raíz) solo tiene el core técnico del proyecto (stack, estructura, cómo
-correrlo) — no contiene reglas de negocio y no hace falta auditarlo contra el código.
+`CLAUDE.md` (raíz) y `.specify/memory/constitution.md` solo tienen el core técnico del
+proyecto (stack, estructura, cómo correrlo) — no contienen reglas de negocio y no hace
+falta auditarlos contra el código.
 
 ## Paso 0 — Releer las fuentes, siempre
 
@@ -73,10 +74,13 @@ Para cada afirmación, buscar el código que la implementa:
 
 - Reglas on-chain → `contracts/FenrirFactory.sol`, `FenrirProject.sol`,
   `FenrirToken.sol`, `FenrirGovernor.sol`.
-- Reglas off-chain → `backend/src/` (sobre todo `services/` y `models/`, ver skill
+- Reglas off-chain → `server/src/` (sobre todo `services/` y `models/`, ver skill
   `backend-architecture`): verificación de CUIT, listener de eventos on-chain, server
   de reportes de hitos y su hash.
-- Reglas de flujo/UI → `frontend/src/`.
+- Reglas de flujo/UI → `client/src/`.
+- Si una regla de negocio aparece implementada (aunque sea parcialmente) en
+  `shared/`, es un hallazgo ⚠️ Diverge por sí solo: `shared/` no debe contener lógica
+  de negocio, solo esquemas de forma/constantes (ver constitution Principio II).
 
 Si no se encuentra código que implemente una afirmación, es un hallazgo de tipo "no
 implementado" — no se descarta solo porque no haya código todavía.

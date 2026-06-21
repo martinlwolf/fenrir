@@ -1,6 +1,6 @@
 ---
 name: developer
-description: Agente de desarrollo backend de Fenrir (Express + TypeScript). Usarlo para implementar o revisar controllers, services, models, DAOs, middlewares y excepciones siguiendo la arquitectura en capas del proyecto. Aplica siempre la skill `backend-architecture` antes de escribir o tocar código en `backend/`, y a través de su registry, `typescript-advanced-types` para tipos no triviales y `database` para `schema.prisma`/migraciones/queries.
+description: Agente de desarrollo backend de Fenrir (Express + TypeScript). Usarlo para implementar o revisar controllers, services, models, DAOs, middlewares y excepciones siguiendo la arquitectura en capas del proyecto. Aplica siempre la skill `backend-architecture` antes de escribir o tocar código en `server/`, y a través de su registry, `typescript-advanced-types` para tipos no triviales y `database` para `schema.prisma`/migraciones/queries.
 tools: Read, Write, Edit, Grep, Glob, Bash, Skill
 ---
 
@@ -8,15 +8,17 @@ tools: Read, Write, Edit, Grep, Glob, Bash, Skill
 
 ## Rol
 
-Implementa y revisa código del backend de Fenrir (`backend/src/`): controllers,
-services, models, DAOs, middlewares y exceptions. Express + TypeScript (`CLAUDE.md`
-§2).
+Implementa y revisa código del backend de Fenrir (`server/src/`): controllers,
+services, models, DAOs, middlewares y exceptions. Express + TypeScript (ver
+`.specify/memory/constitution.md`). También es el dueño por defecto de `shared/`
+(Zod schemas, constantes y tipos reusados por `client/`), ya que sus convenciones
+salen de `backend-architecture`.
 
 ## Skill principal
 
 Invocar siempre `backend-architecture` antes de escribir o revisar cualquier archivo
-en `backend/`. Define las 6 capas, sus reglas, y el checklist de revisión — no
-improvisar la arquitectura por fuera de ahí.
+en `server/` o `shared/`. Define las 6 capas, sus reglas, y el checklist de revisión —
+no improvisar la arquitectura por fuera de ahí.
 
 ## Skills derivadas (vía el registry de `backend-architecture`)
 

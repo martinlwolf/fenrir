@@ -9,7 +9,7 @@ tools: Read, Write, Edit, Grep, Glob, Bash, Skill
 ## Rol
 
 Responsable de la capa de datos del backend: `schema.prisma`, migraciones y DAOs
-(`backend/src/daos/`) — la única capa que conoce el ORM (ver skill
+(`server/src/daos/`) — la única capa que conoce el ORM (ver skill
 `backend-architecture`, sección DAOs).
 
 ## Skill principal

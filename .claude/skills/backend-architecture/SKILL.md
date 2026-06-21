@@ -1,14 +1,14 @@
 ---
 name: backend-architecture
-description: Aplica la arquitectura en capas del backend de Fenrir (Thin Controllers → Services → Models/DAOs, Middlewares, FenrirException) al crear o modificar código en backend/ — rutas/controllers de Express, lógica de negocio, queries a la base de datos, excepciones, middlewares, validación con Zod o documentación de la API. Funciona también como registry: para tipos avanzados de TypeScript al generar interfaces, DTOs o tipos de request/response, registra `typescript-advanced-types`; para `schema.prisma`, migraciones, índices o pooling de conexiones, registra `database`. Usar también en modo revisión para detectar violaciones de capas en código backend existente (SQL u ORM fuera de un DAO, lógica de negocio en un controller, IDs en vez de objetos, excepciones casi duplicadas, falta de manejo de errores centralizado).
+description: Aplica la arquitectura en capas del backend de Fenrir (Thin Controllers → Services → Models/DAOs, Middlewares, FenrirException) al crear o modificar código en server/ — rutas/controllers de Express, lógica de negocio, queries a la base de datos, excepciones, middlewares, validación con Zod o documentación de la API. Define también la convención de `shared/` para Zod schemas, constantes y tipos reusados por client/. Funciona también como registry: para tipos avanzados de TypeScript al generar interfaces, DTOs o tipos de request/response, registra `typescript-advanced-types`; para `schema.prisma`, migraciones, índices o pooling de conexiones, registra `database`. Usar también en modo revisión para detectar violaciones de capas en código backend existente (SQL u ORM fuera de un DAO, lógica de negocio en un controller, IDs en vez de objetos, excepciones casi duplicadas, falta de manejo de errores centralizado, o lógica de negocio filtrada a `shared/`).
 ---
 
 # Arquitectura del backend de Fenrir
 
-Backend en Express + TypeScript (ver `CLAUDE.md` raíz). Esta skill define las 6 capas
-del backend y las reglas de cada una. El objetivo: que la lógica de negocio nunca se
-filtre a un controller, que las queries nunca se filtren fuera de un DAO, y que los
-errores se manejen siempre de la misma forma.
+Backend en Express + TypeScript (ver `.specify/memory/constitution.md`). Esta skill
+define las 6 capas del backend y las reglas de cada una. El objetivo: que la lógica de
+negocio nunca se filtre a un controller (ni a `shared/`), que las queries nunca se
+filtren fuera de un DAO, y que los errores se manejen siempre de la misma forma.
 
 ## Registry de skills
 
@@ -25,17 +25,29 @@ migraciones, índices o configuración de conexión, invocar `database` directam
 ## Estructura de carpetas sugerida
 
 ```
-backend/src/
+server/src/
 ├── controllers/      # Thin Controllers
 ├── services/          # Services
 ├── models/             # Models (objetos de negocio)
 ├── daos/                 # DAOs (única capa que toca el ORM)
 ├── middlewares/        # auth, error handling, formato de respuesta, roles
 ├── exceptions/          # FenrirException + subclases
-├── schemas/             # esquemas Zod usados por los controllers
+├── schemas/             # esquemas Zod que NO comparte el frontend (solo este servicio)
 ├── routes/                # wiring de método+path → controller
 └── docs/                   # config de swagger / openapi
+
+shared/
+├── schemas/             # esquemas Zod de request/response que también usa client/
+├── constants/           # constantes (enums de estado, límites, etc.) usadas por ambos
+└── types/                  # tipos/DTOs compartidos
 ```
+
+**Regla de `schemas/` vs `shared/schemas/`:** si `client/` necesita el mismo esquema
+Zod para validar formato antes de llamar a la API (la única validación de negocio
+permitida en el frontend, ver constitution Principio II), ese esquema vive en
+`shared/schemas/` y el controller lo importa de ahí — no se duplica uno igual en
+`server/src/schemas/`. Lo que se queda en `server/src/schemas/` es exclusivamente
+interno (nunca lo ve el frontend).
 
 ## 1. Controllers (`controllers/`) — flacos
 
@@ -98,7 +110,7 @@ export class Project {
 
 ## 3. DAOs (`daos/`) — única capa que toca el ORM
 
-Abstraen el ORM, que en este proyecto es **Prisma** (ver `CLAUDE.md` §2/§8). **Toda**
+Abstraen el ORM, que en este proyecto es **Prisma** (ver `.specify/memory/constitution.md`). **Toda**
 query vive en un DAO; no puede existir una llamada a Prisma en ningún otro archivo. Un
 DAO recibe/devuelve **entidades de `models/`**, nunca filas crudas del ORM.
 
