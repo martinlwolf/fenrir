@@ -1,0 +1,33 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "lib": ["ES2022"],
+    "outDir": "dist",
+    // El typecheck incluye ../shared (ver include). Fijamos rootDir al directorio que
+    // contiene tanto src/ como shared/ para que ese import no quede "fuera del rootDir"
+    // (TS6059) cuando el editor le asigna shared/ a su propio tsconfig. tsc aca corre
+    // siempre con --noEmit, asi que no afecta la salida (el build real es esbuild).
+    "rootDir": "..",
+    "rootDirs": ["src", "../shared"],
+    "baseUrl": ".",
+    "paths": {
+      "@shared/*": ["../shared/*"]
+    },
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "noImplicitAny": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "skipLibCheck": true,
+    "declaration": false,
+    "sourceMap": true
+  },
+  "include": ["src/**/*.ts", "../shared/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
+}

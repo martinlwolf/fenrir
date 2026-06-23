@@ -1,0 +1,52 @@
+# docker-compose de Fenrir. Por ahora levanta el backend (server) y su base de datos
+# PostgreSQL. El client/ se sumara en su propia feature.
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: fenrir
+      POSTGRES_PASSWORD: fenrir
+      POSTGRES_DB: fenrir
+    ports:
+      - "5432:5432"
+    volumes:
+      - fenrir_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fenrir -d fenrir"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  server:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PORT: 4000
+      DATABASE_URL: postgresql://fenrir:fenrir@postgres:5432/fenrir?schema=public
+      DIRECT_URL: postgresql://fenrir:fenrir@postgres:5432/fenrir?schema=public
+      SEPOLIA_RPC_URL: ${SEPOLIA_RPC_URL}
+      SEPOLIA_CHAIN_ID: ${SEPOLIA_CHAIN_ID:-11155111}
+      FENRIR_FACTORY_ADDRESS: ${FENRIR_FACTORY_ADDRESS}
+      INGESTION_START_BLOCK: ${INGESTION_START_BLOCK:-0}
+      INGESTION_CONFIRMATIONS: ${INGESTION_CONFIRMATIONS:-5}
+      INGESTION_BACKFILL_BATCH: ${INGESTION_BACKFILL_BATCH:-2000}
+      REPORT_STORAGE_DRIVER: ${REPORT_STORAGE_DRIVER:-local}
+      REPORT_STORAGE_LOCAL_DIR: /app/server/.data/reports
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:4000}
+      AUTH_NONCE_TTL_MINUTES: ${AUTH_NONCE_TTL_MINUTES:-10}
+    ports:
+      - "4000:4000"
+    volumes:
+      - fenrir_reports:/app/server/.data/reports
+    # Aplica migraciones y arranca. En produccion se prefiere `migrate deploy`.
+    command: sh -c "npx prisma migrate deploy && node dist/index.js"
+
+volumes:
+  fenrir_pgdata:
+  fenrir_reports:

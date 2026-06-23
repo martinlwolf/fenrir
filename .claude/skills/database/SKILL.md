@@ -1,15 +1,17 @@
 ---
 name: database
-description: Capa de datos del backend de Fenrir (Prisma + PostgreSQL). Usar al diseñar o modificar `schema.prisma`, escribir o revisar DAOs y queries, configurar migraciones, índices o pooling de conexiones, o preparar el código para la futura migración a Supabase. Funciona como registry de `prisma-postgres` (conexiones, pooled vs. direct URL, provisioning, Prisma Client) y `supabase-postgres-best-practices` (performance de queries, índices, schema, RLS), y fija la convención del datasource con `url`/`directUrl` separados desde el día uno.
+description: Capa de datos del backend de Fenrir (Prisma + PostgreSQL). Usar al diseñar o modificar `schema.prisma`, escribir o revisar repositorios y queries, configurar migraciones, índices o pooling de conexiones, o preparar el código para la futura migración a Supabase. Funciona como registry de `prisma-postgres` (conexiones, pooled vs. direct URL, provisioning, Prisma Client) y `supabase-postgres-best-practices` (performance de queries, índices, schema, RLS), y fija la convención del datasource con `url`/`directUrl` separados desde el día uno.
 ---
 
 # Database (Fenrir)
 
 ## Capa que cubre
 
-`schema.prisma`, migraciones y los DAOs (`server/src/daos/`) — la única capa que
-conoce el ORM (ver skill `backend-architecture`, sección DAOs). Esta skill no la
-reemplaza: la complementa con el detalle específico de Prisma + Postgres.
+`schema.prisma`, migraciones y los repositorios (`server/src/persistence/repositories/`)
+— la única capa que conoce el ORM (ver skill `backend-architecture`, sección
+Repositories). En Fenrir la capa de datos se llama **repositorio** y no "DAO", porque
+"DAO" nombra al órgano de gobernanza on-chain. Esta skill no reemplaza a
+`backend-architecture`: la complementa con el detalle específico de Prisma + Postgres.
 
 ## Contexto del proyecto
 
@@ -42,7 +44,7 @@ datasource db {
 }
 ```
 
-- **`DATABASE_URL`** — la usa el Prisma Client en runtime (DAOs, queries de la app).
+- **`DATABASE_URL`** — la usa el Prisma Client en runtime (repositorios, queries de la app).
   Al migrar a Supabase, es la que apunta al pooler (Supavisor/PgBouncer, puerto 6543).
 - **`DIRECT_URL`** — la usa `prisma migrate` / `prisma db push`. Los poolers de
   transacción no soportan lo que necesitan las migraciones (prepared statements, DDL
@@ -61,11 +63,11 @@ datasource db {
    constraints, aplicar `supabase-postgres-best-practices` (categoría `schema-`).
 2. **Migraciones** — generarlas con `prisma migrate dev` (local), que usa
    `DIRECT_URL`. Para dudas de provisioning o de conexión, consultar `prisma-postgres`.
-3. **Prisma Client** — una sola instancia (singleton), importada solo desde los DAOs;
+3. **Prisma Client** — una sola instancia (singleton), importada solo desde los repositorios;
    nunca instanciar `new PrismaClient()` por archivo o por request (agota conexiones,
    sobre todo contra un pooler). Ver `prisma-postgres` (`console-and-connections`) para
    el patrón según el entorno (serverless vs. servidor long-running).
-4. **DAOs y queries** — escribirlas pensando en performance desde el principio
+4. **Repositorios y queries** — escribirlas pensando en performance desde el principio
    (índices que la query necesita, evitar N+1, `select` explícito en vez de traer el
    modelo entero). Aplicar `supabase-postgres-best-practices` (`query-`, `data-`,
    `lock-`).
@@ -79,7 +81,7 @@ datasource db {
 
 ## Qué no hacer
 
-- No escribir SQL crudo ni llamar a Prisma fuera de `daos/` (regla de
+- No escribir SQL crudo ni llamar a Prisma fuera de `persistence/repositories/` (regla de
   `backend-architecture`).
 - No hardcodear `DATABASE_URL`/`DIRECT_URL` ni ninguna connection string — siempre vía
   `.env` (ver `.specify/memory/constitution.md`, Principio V).

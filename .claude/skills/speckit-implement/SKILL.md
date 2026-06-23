@@ -154,7 +154,7 @@ You **MUST** consider the user input before proceeding (if not empty).
    - Infer the owning agent for each task from the file path(s) in its description:
      - `client/**` → `frontend` agent
      - `server/**/schema.prisma`, `server/prisma/migrations/**`, or
-       `server/**/daos/**` → `database` agent
+       `server/**/persistence/repositories/**` → `database` agent
      - Any other path under `server/**` → `developer` agent
      - `shared/**` (Zod schemas, constants, types reused by `client/` and `server/`)
        → `developer` agent, since `shared/` conventions are governed by the
