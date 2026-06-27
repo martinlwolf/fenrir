@@ -1,0 +1,12 @@
+
+{
+  "mcpServers": {
+    "open-pencil": {
+      "command": "openpencil-mcp",
+      "env": {
+        "HOST": "127.0.0.1",
+        "WS_PORT": "7601"
+      }
+    }
+  }
+}

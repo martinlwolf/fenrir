@@ -13,6 +13,12 @@
       "skillPath": "skills/docker-expert/SKILL.md",
       "computedHash": "7be30b1c18b91628dcd8437a89e7e20acce76bae4349533e4ebdeb376a660bcb"
     },
+    "open-pencil": {
+      "source": "open-pencil/skills",
+      "sourceType": "github",
+      "skillPath": "skills/open-pencil/SKILL.md",
+      "computedHash": "86b26dd3d31363985dd185019e4180d86b731e171992d1be3d382db20037c721"
+    },
     "prisma-postgres": {
       "source": "prisma/skills",
       "sourceType": "github",
