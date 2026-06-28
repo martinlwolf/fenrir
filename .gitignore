@@ -20,6 +20,11 @@ server/.data/
 # Prisma
 server/prisma/*.db
 
+# Hardhat (output de build, regenerable)
+contracts/cache/
+contracts/artifacts/
+contracts/typechain-types/
+
 # Coverage / tests
 coverage/
 

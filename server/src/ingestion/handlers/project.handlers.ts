@@ -48,3 +48,19 @@ export const projectHandlers: { factory: HandlerMap; project: HandlerMap } = {
     ),
   },
 };
+
+/*
+
+saca foto del depto -> hash
+sube las facturas   -> hash
+duracion hito       -> hash
+cuando lo declaro   -> hash
+
+n hashes -> hashealo (UNO SOLO)
+
+url <- free
+
+hito -> hito id -> onchain -> urlHito + hashHito
+
+
+*/

@@ -1,9 +1,9 @@
 {
-  "name": "@fenrir/contracts",
-  "version": "0.1.0",
-  "private": true,
-  "description": "Contratos Solidity de Fenrir (fuente de verdad on-chain). Se compilan y despliegan manualmente en Remix IDE; aca solo se declaran las dependencias OpenZeppelin para referencia/editor local, NO hay pipeline de compilacion (ver constitution Principio IV).",
+  "devDependencies": {
+    "hardhat": "^3.9.0"
+  },
   "dependencies": {
-    "@openzeppelin/contracts": "5.0.2"
-  }
+    "@openzeppelin/contracts": "^5.0.2"
+  },
+  "type": "module"
 }

@@ -16,7 +16,7 @@ import {
   projectContractHandlers,
 } from "./handlers";
 import type { HandlerMap } from "./handlers/types";
-import { IngestionService, ingestionService } from "./ingestion.service";
+import { IngestionService, ingestionService, OnChainEventMeta } from "./ingestion.service";
 
 // Empareja el ABI de un contrato con sus handlers, para no mantener `iface` y
 // `handlers` sueltos en paralelo: una fuente de eventos viaja como una sola cosa y
@@ -46,7 +46,7 @@ export class OnChainListener {
     private readonly provider: Provider = defaultProvider,
     private readonly ingestion: IngestionService = ingestionService,
     private readonly projects: ProjectRepository = projectRepository,
-  ) {}
+  ) { }
 
   start(): void {
     logger.info({ pollIntervalMs: POLL_INTERVAL_MS }, "iniciando ingestion por polling");
@@ -75,7 +75,8 @@ export class OnChainListener {
       index: log.index,
       blockNumber: log.blockNumber,
       eventName: parsed.name,
-    };
+    } as OnChainEventMeta;
+    
     await this.ingestion.applyOnce(meta, () =>
       handler({ args: parsed.args, address: log.address, meta }),
     );
@@ -100,7 +101,7 @@ export class OnChainListener {
     const safeBlock = head - env.INGESTION_CONFIRMATIONS;
     if (safeBlock < 0) return;
 
-    const cursor = await this.ingestion.loadCursor(SCOPE, env.INGESTION_START_BLOCK);
+    const cursor = await this.ingestion.loadCursor(SCOPE, env.INGESTION_START_BLOCK); // el ultimo bloque que ya procese
     const from = cursor === BigInt(env.INGESTION_START_BLOCK) ? Number(cursor) : Number(cursor) + 1;
     if (from > safeBlock) return;
 

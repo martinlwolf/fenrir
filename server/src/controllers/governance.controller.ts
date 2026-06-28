@@ -1,14 +1,14 @@
 // Thin controller de gobernanza.
+import { addressSchema } from "@shared/schemas/common.schema";
 import type { Request, Response } from "express";
 import { z } from "zod";
-import { addressSchema } from "@shared/schemas/common.schema";
 import { addressParamSchema, proposalParamsSchema } from "../schemas/params";
 import { GovernanceService, governanceService } from "../services/governance.service";
 
 const votingPowerQuerySchema = z.object({ wallet: addressSchema });
 
 export class GovernanceController {
-  constructor(private readonly governance: GovernanceService = governanceService) {}
+  constructor(private readonly governance: GovernanceService = governanceService) { }
 
   listProposals = async (req: Request, res: Response): Promise<void> => {
     const { address } = addressParamSchema.parse(req.params);

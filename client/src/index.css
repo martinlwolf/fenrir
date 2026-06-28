@@ -24,6 +24,29 @@
     --input: 214.3 31.8% 91.4%;
     --ring: 222.2 84% 4.9%;
     --radius: 0.5rem;
+
+    /* Tokens semánticos de la landing (diseño Fenrir · Home, light). No tocan el tema shadcn. */
+    --fen-bg: #ffffff;
+    --fen-surface: #f6f7f9;
+    --fen-surface-2: #f2f4f7;
+    --fen-border: #e6e7eb;
+    --fen-border-strong: #d7d9e0;
+    --fen-divider: #eef0f3;
+    --fen-rule: #e0e2e8;
+    --fen-ink: #14152b;
+    --fen-ink-2: #3c404d;
+    --fen-body: #5a5e6b;
+    --fen-muted: #8a8e99;
+    --fen-accent: #2563eb;
+    --fen-verified: #1f9d55;
+    --fen-verified-soft: #eaf6ee;
+    --fen-amber: #b7791f;
+    --fen-amber-soft: #fef3e2;
+    /* Superficie oscura (CTA / acentos sobre tinta) */
+    --fen-dark-surface: #23253d;
+    --fen-dark-border: #3a3d57;
+    --fen-on-dark-dim: #c9ccd6;
+    --fen-on-dark-muted: #9aa0b4;
   }
 
   .dark {
