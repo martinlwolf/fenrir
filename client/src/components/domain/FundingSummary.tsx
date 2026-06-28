@@ -1,5 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatWei, formatDate, shortAddress } from "@/lib/format";
+import { Badge } from "@/components/ui/badge";
+import { useWallet } from "@/providers/WalletProvider";
+import { formatWei, formatDate, sameAddress, shortAddress } from "@/lib/format";
 import type { ProjectDetailResponse } from "@shared/schemas/project.schema";
 
 function Row({ label, value }: { label: string; value: string }) {
@@ -12,12 +14,19 @@ function Row({ label, value }: { label: string; value: string }) {
 }
 
 export function FundingSummary({ project }: { project: ProjectDetailResponse }) {
+  const { address } = useWallet();
+  const isArbiter = sameAddress(project.currentArbiter, address);
   return (
     <Card>
       <CardHeader className="pb-2">
         <CardTitle className="text-base">Fondeo</CardTitle>
       </CardHeader>
       <CardContent className="space-y-1.5">
+        {isArbiter && (
+          <Badge variant="warning" className="mb-1">
+            Sos el árbitro de este proyecto
+          </Badge>
+        )}
         <Row label="Recaudado" value={formatWei(project.totalRaised)} />
         <Row label="Objetivo (FF)" value={formatWei(project.ff)} />
         <Row label="Mínimo para arrancar (FMPA)" value={formatWei(project.fmpa)} />

@@ -6,8 +6,8 @@ import { Label } from "@/components/ui/label";
 import { TxFeedback } from "./TxFeedback";
 import { useWallet } from "@/providers/WalletProvider";
 import { useWrite } from "@/hooks/useWrite";
-import { castElectionVote } from "@/lib/chain/contracts";
-import { timeRemaining } from "@/lib/format";
+import { castElectionVote, resolve } from "@/lib/chain/contracts";
+import { isPast, timeRemaining } from "@/lib/format";
 import type { ProposalResponse } from "@shared/schemas/proposal.schema";
 
 const ADDRESS_RE = /^0x[a-fA-F0-9]{40}$/;
@@ -30,6 +30,7 @@ export function ArbiterElectionPanel({
   const [formError, setFormError] = useState<string | null>(null);
   const busy = phase === "signing" || phase === "mining" || phase === "propagating";
   const active = proposal.status === "Active";
+  const canResolve = active && isPast(proposal.deadline);
 
   function vote() {
     setFormError(null);
@@ -69,6 +70,16 @@ export function ArbiterElectionPanel({
               {busy ? "Procesando…" : "Votar candidato"}
             </Button>
           </div>
+        )}
+        {canResolve && address && isOnSepolia && (
+          <Button
+            size="sm"
+            variant="secondary"
+            disabled={busy}
+            onClick={() => void run(() => resolve(governorAddress, proposal.governorProposalId))}
+          >
+            {busy ? "Procesando…" : "Finalizar elección"}
+          </Button>
         )}
         <TxFeedback phase={phase} error={error} />
       </CardContent>

@@ -6,9 +6,12 @@ import { LoadingState, EmptyState, ErrorState } from "@/components/domain/states
 import { TxFeedback } from "@/components/domain/TxFeedback";
 import { useWallet } from "@/providers/WalletProvider";
 import { useInvestments, useClaimable } from "@/hooks/useInvestments";
+import { useProject } from "@/hooks/useProject";
 import { useWrite } from "@/hooks/useWrite";
 import { claimDistribution, claimRefund } from "@/lib/chain/contracts";
 import { formatWei, shortAddress } from "@/lib/format";
+import { TransferFdtDialog } from "@/components/domain/TransferFdtDialog";
+import type { InvestmentResponse } from "@shared/schemas/project.schema";
 import type { ClaimTypeValue } from "@shared/constants/enums";
 
 function ClaimButton({ projectAddress, type }: { projectAddress: string; type: ClaimTypeValue }) {
@@ -29,6 +32,23 @@ function ClaimButton({ projectAddress, type }: { projectAddress: string; type: C
         {busy ? "Procesando…" : type === "Refund" ? "Reclamar reembolso" : "Reclamar reparto"}
       </Button>
       <TxFeedback phase={phase} error={error} />
+    </div>
+  );
+}
+
+// Fila de inversión: muestra el monto y, resolviendo el tokenAddress del proyecto, permite
+// transferir el FDT de esa participación a otra wallet.
+function InvestmentRow({ inv }: { inv: InvestmentResponse }) {
+  const { data: project } = useProject(inv.projectAddress);
+  return (
+    <div className="flex items-center justify-between gap-4 border-b py-2 last:border-0">
+      <Link to={`/projects/${inv.projectAddress}`} className="hover:underline">
+        {shortAddress(inv.projectAddress)}
+      </Link>
+      <div className="flex items-center gap-3">
+        <span className="font-medium">{formatWei(inv.amount)}</span>
+        {project?.tokenAddress && <TransferFdtDialog tokenAddress={project.tokenAddress} />}
+      </div>
     </div>
   );
 }
@@ -65,15 +85,7 @@ export function MyPortfolioPage() {
           ) : (
             <div className="space-y-2">
               {investments.data.map((inv) => (
-                <div
-                  key={inv.projectAddress}
-                  className="flex items-center justify-between border-b py-2 last:border-0"
-                >
-                  <Link to={`/projects/${inv.projectAddress}`} className="hover:underline">
-                    {shortAddress(inv.projectAddress)}
-                  </Link>
-                  <span className="font-medium">{formatWei(inv.amount)}</span>
-                </div>
+                <InvestmentRow key={inv.projectAddress} inv={inv} />
               ))}
             </div>
           )}

@@ -6,6 +6,8 @@ import { MilestoneList } from "@/components/domain/MilestoneList";
 import { InvestDialog } from "@/components/domain/InvestDialog";
 import { GovernanceSection } from "@/components/domain/GovernanceSection";
 import { SaleSection } from "@/components/domain/SaleSection";
+import { ClaimCommissionPanel } from "@/components/domain/ClaimCommissionPanel";
+import { MaintenancePanel } from "@/components/domain/MaintenancePanel";
 import { ProjectStatusBadge } from "@/components/domain/StatusBadge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -70,8 +72,10 @@ export function ProjectDetailPage() {
         </TabsList>
         <TabsContent value="summary">
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-            <div className="lg:col-span-1">
+            <div className="space-y-6 lg:col-span-1">
               <FundingSummary project={project} />
+              <ClaimCommissionPanel project={project} />
+              <MaintenancePanel project={project} />
             </div>
             <div className="lg:col-span-2">
               <MilestoneList

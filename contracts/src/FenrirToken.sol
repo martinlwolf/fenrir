@@ -72,6 +72,15 @@ contract FenrirToken is ERC20, ERC20Permit, ERC20Votes, IFenrirVotesToken, IFenr
             _holders.push(to);
         }
 
+        // Auto-delegacion: ERC20Votes deja el poder de voto en 0 hasta que la wallet delega
+        // (aunque sea a si misma). La primera vez que una wallet recibe FDT la auto-delegamos
+        // para que sus tokens cuenten como voto en las propuestas (getPastVotes via snapshot),
+        // sin exigirle un paso manual tras invertir. Si ya delego a un tercero a proposito,
+        // delegates(to) != 0 y no lo pisamos.
+        if (to != address(0) && delegates(to) == address(0)) {
+            _delegate(to, to);
+        }
+
         if (from != address(0) && governor != address(0)) {
             address currentArbiter = IFenrirGovernorArbiter(governor).arbiter();
             if (currentArbiter != address(0) && from == currentArbiter && balanceOf(from) == 0) {

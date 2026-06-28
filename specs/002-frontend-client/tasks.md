@@ -188,3 +188,63 @@ services → hooks → componentes → pantalla/integración. Las escrituras pas
 2. Incremental: US2 → US3 → US4 → US5, validando cada slice.
 3. Sin backend corriendo: `VITE_USE_MOCK=true` (MSW) para lecturas; las escrituras requieren wallet de Sepolia real o stub de `lib/chain`.
 4. Commit por tarea o grupo lógico; frenar en cada checkpoint.
+
+---
+
+## Phase 9: Gaps de cobertura contracts/API (cierre de la demo de punta a punta)
+
+**Contexto**: las fases 3–8 dejaron el frontend con la mayoría del happy-path, pero NO
+expone varias acciones que los contratos sí permiten y que son necesarias para que la demo
+cierre (resolver propuestas vencidas, ejecutar la venta, desempate del árbitro, etc.) más
+un bug de rol en el voto de oferta. Estas tareas siguen el patrón obligatorio:
+wrapper en `client/src/lib/chain/contracts.ts` → `useWrite` → componente; ABIs nuevas solo
+en `shared/chain/abis.ts`.
+
+### 🔴 P0 — sin esto la demo NO cierra
+
+- [X] T066 [GAP-1] `resolve(proposalId)`: wrapper `resolve(governorAddress, proposalId)` en
+  `contracts.ts` (firma ya en `FENRIR_GOVERNOR_ABI`) + botón "Finalizar votación" en
+  `VotePanel.tsx` cuando la propuesta esté `Active` y el `deadline` ya pasó (cualquiera puede
+  llamarla). También en `ArbiterElectionPanel.tsx` (misma condición).
+- [X] T067 [GAP-2] `executeSale()`: wrapper `executeSale(projectAddress)` (firma ya en
+  `FENRIR_PROJECT_ABI`) + botón "Ejecutar venta" en `SaleSection.tsx` cuando exista una oferta
+  `Approved` y el proyecto siga `Selling` (cualquiera puede llamarla).
+- [X] T068 [GAP-4] Conciencia de rol árbitro: hook `useArbiter(address)` que consume
+  `getArbiter` (`GET /projects/:address/arbiter`); resaltar "Sos el árbitro" cuando
+  `currentArbiter === wallet` (en `FundingSummary` o panel dedicado). Habilita GAP-3.
+- [X] T069 [GAP-3] `arbiterDecide(proposalId, approve)`: wrapper
+  `arbiterDecide(governorAddress, proposalId, approve)` (firma ya en `FENRIR_GOVERNOR_ABI`) +
+  botones "Aprobar"/"Rechazar" en `VotePanel.tsx` visibles SOLO si la wallet === árbitro y la
+  propuesta está `AwaitingArbiter`.
+
+### 🟠 P1 — bug de rol + funcionalidad de developer
+
+- [X] T070 [GAP-5] Voto de oferta role-aware en `SaleSection.tsx` (`OfferRow`): si la wallet
+  es el developer → `castDeveloperSaleVote`; si es inversor → `castVote`. Hoy llama siempre
+  `castDeveloperSaleVote`, que revierte para inversores.
+- [X] T071 [GAP-6] `claimCommission()`: botón "Reclamar comisión" para el developer cuando el
+  proyecto esté `Completed` (wrapper ya existe). Limitación de API: no hay campo de comisión
+  reclamable; se muestra el botón y el contrato valida el monto. **TODO documentado**:
+  proponer dato `claimableCommission` al backend.
+
+### 🟡 P2 — completitud de tokens y casos borde
+
+- [X] T072 [GAP-7] Transferencia de FDT: agregar `transfer(to, amount)` a `FENRIR_TOKEN_ABI`,
+  wrapper `transferFdt(tokenAddress, to, amount)` + UI en `MyPortfolioPage` por inversión
+  (necesita `tokenAddress` y balance FDT).
+- [X] T073 [GAP-8] Funciones de mantenimiento (agregar firmas a `FENRIR_PROJECT_ABI` +
+  wrappers + botones contextuales): `cancelExpiredFunding()` (proyecto `Funding` vencido sin
+  FMPA), `cancelStalledMilestone()` (hito estancado, solo inversor), `pokeFundingGates()`
+  (destrabar tranches, proyecto `Building`).
+- [X] T074 [GAP-9 / delegación] **Hallazgo crítico (resuelto en el contrato)**: `invest()`
+  mintea FDT pero `ERC20Votes` deja el poder de voto en 0 hasta delegar; `_votingWeight` usa
+  `getPastVotes` (snapshot `block.number - 1`), así que sin delegación previa el voto da 0.
+  **Fix aplicado**: auto-delegación en `FenrirToken._update` (`_delegate(to, to)` la primera
+  vez que una wallet recibe FDT). Con esto la activación pasa en el mismo bloque del mint y
+  los inversores votan sin paso manual. Como el snapshot es `block.number - 1`, queda un único
+  caso de borde inevitable: el inversor que dispara el FMPA no llega a votar *esa* elección de
+  árbitro puntual (su delegación cae 1 bloque tarde). El parche frontend (panel "Activar poder
+  de voto") se descartó por innecesario; solo queda el wrapper/UI de `transfer` de FDT.
+
+**Checkpoint**: todas las acciones de los contratos quedan expuestas en la UI; la demo cierra
+de punta a punta (fondeo → árbitro → hitos → venta → reparto/comisión).

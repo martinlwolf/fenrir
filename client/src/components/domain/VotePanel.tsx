@@ -5,8 +5,8 @@ import { TxFeedback } from "./TxFeedback";
 import { useWallet } from "@/providers/WalletProvider";
 import { useVotingPower } from "@/hooks/useProposals";
 import { useWrite } from "@/hooks/useWrite";
-import { castVote } from "@/lib/chain/contracts";
-import { formatWei, timeRemaining } from "@/lib/format";
+import { arbiterDecide, castVote, resolve } from "@/lib/chain/contracts";
+import { formatWei, isPast, timeRemaining } from "@/lib/format";
 import type { ProposalResponse } from "@shared/schemas/proposal.schema";
 
 const KIND_LABEL = {
@@ -30,10 +30,13 @@ export function VotePanel({
   projectAddress,
   governorAddress,
   proposal,
+  isArbiter = false,
 }: {
   projectAddress: string;
   governorAddress: string;
   proposal: ProposalResponse;
+  /** La wallet conectada es el árbitro del proyecto (habilita el desempate). */
+  isArbiter?: boolean;
 }) {
   const { address, isOnSepolia } = useWallet();
   const power = useVotingPower(projectAddress, proposal.governorProposalId, address);
@@ -43,6 +46,11 @@ export function VotePanel({
   ]);
   const busy = phase === "signing" || phase === "mining" || phase === "propagating";
   const active = proposal.status === "Active";
+  const expired = isPast(proposal.deadline);
+  // Vencida y sin auto-resolver: cualquiera puede cerrarla (no voto el 100% del poder).
+  const canResolve = active && expired;
+  // Trabada por empate/falta de quorum: solo el arbitro la destraba.
+  const awaitingArbiter = proposal.status === "AwaitingArbiter";
 
   function vote(support: boolean) {
     void run(() => castVote(governorAddress, proposal.governorProposalId, support));
@@ -76,7 +84,7 @@ export function VotePanel({
           />
         )}
 
-        {active && address && isOnSepolia && !power.data?.hasVoted && (
+        {active && !expired && address && isOnSepolia && !power.data?.hasVoted && (
           <div className="flex gap-2 pt-2">
             <Button size="sm" disabled={busy} onClick={() => vote(true)}>
               A favor
@@ -84,6 +92,49 @@ export function VotePanel({
             <Button size="sm" variant="outline" disabled={busy} onClick={() => vote(false)}>
               En contra
             </Button>
+          </div>
+        )}
+
+        {canResolve && address && isOnSepolia && (
+          <div className="pt-2">
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={busy}
+              onClick={() => void run(() => resolve(governorAddress, proposal.governorProposalId))}
+            >
+              {busy ? "Procesando…" : "Finalizar votación"}
+            </Button>
+            <p className="pt-1 text-xs text-muted-foreground">
+              La votación venció y no se resolvió sola. Cualquiera puede cerrarla.
+            </p>
+          </div>
+        )}
+
+        {awaitingArbiter && isArbiter && address && isOnSepolia && (
+          <div className="space-y-1 pt-2">
+            <p className="text-sm font-medium">Desempate del árbitro</p>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                disabled={busy}
+                onClick={() =>
+                  void run(() => arbiterDecide(governorAddress, proposal.governorProposalId, true))
+                }
+              >
+                Aprobar
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={busy}
+                onClick={() =>
+                  void run(() => arbiterDecide(governorAddress, proposal.governorProposalId, false))
+                }
+              >
+                Rechazar
+              </Button>
+            </div>
           </div>
         )}
         <TxFeedback phase={phase} error={error} />

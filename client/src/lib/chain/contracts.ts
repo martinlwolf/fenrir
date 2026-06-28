@@ -8,8 +8,13 @@ import {
   type ProjectTypeValue,
   type VotingModeValue,
 } from "@shared/constants/enums";
+import {
+  FENRIR_FACTORY_ABI,
+  FENRIR_GOVERNOR_ABI,
+  FENRIR_PROJECT_ABI,
+  FENRIR_TOKEN_ABI,
+} from "@shared/chain/abis";
 import { env } from "../env";
-import { FENRIR_FACTORY_ABI, FENRIR_GOVERNOR_ABI, FENRIR_PROJECT_ABI } from "./abis";
 import { getSigner } from "./provider";
 
 async function factory(): Promise<Contract> {
@@ -20,6 +25,9 @@ async function project(address: string): Promise<Contract> {
 }
 async function governor(address: string): Promise<Contract> {
   return new Contract(address, FENRIR_GOVERNOR_ABI, await getSigner());
+}
+async function token(address: string): Promise<Contract> {
+  return new Contract(address, FENRIR_TOKEN_ABI, await getSigner());
 }
 
 // --- Factory ---
@@ -96,6 +104,24 @@ export async function claimCommission(projectAddress: string): Promise<Transacti
   return (await project(projectAddress)).claimCommission();
 }
 
+export async function executeSale(projectAddress: string): Promise<TransactionResponse> {
+  return (await project(projectAddress)).executeSale();
+}
+
+// Mantenimiento / casos borde. El contrato valida las precondiciones (estado/rol/deadline);
+// la UI solo muestra el control en el contexto plausible.
+export async function cancelExpiredFunding(projectAddress: string): Promise<TransactionResponse> {
+  return (await project(projectAddress)).cancelExpiredFunding();
+}
+
+export async function cancelStalledMilestone(projectAddress: string): Promise<TransactionResponse> {
+  return (await project(projectAddress)).cancelStalledMilestone();
+}
+
+export async function pokeFundingGates(projectAddress: string): Promise<TransactionResponse> {
+  return (await project(projectAddress)).pokeFundingGates();
+}
+
 // --- Governor ---
 
 export async function castVote(
@@ -120,4 +146,34 @@ export async function castDeveloperSaleVote(
   support: boolean,
 ): Promise<TransactionResponse> {
   return (await governor(governorAddress)).castDeveloperSaleVote(proposalId, support);
+}
+
+// Cierra una propuesta vencida que no se auto-resolvio (no voto el 100% del poder). Cualquiera
+// puede llamarla una vez pasado el deadline.
+export async function resolve(
+  governorAddress: string,
+  proposalId: number,
+): Promise<TransactionResponse> {
+  return (await governor(governorAddress)).resolve(proposalId);
+}
+
+// Desempate del arbitro cuando la propuesta quedo AwaitingArbiter. Solo el arbitro electo.
+export async function arbiterDecide(
+  governorAddress: string,
+  proposalId: number,
+  approve: boolean,
+): Promise<TransactionResponse> {
+  return (await governor(governorAddress)).arbiterDecide(proposalId, approve);
+}
+
+// --- Token (FDT) ---
+
+// La auto-delegacion ocurre on-chain en FenrirToken._update (al recibir FDT), asi que no se
+// expone un paso manual de delegacion en el front.
+export async function transferFdt(
+  tokenAddress: string,
+  to: string,
+  amountWei: bigint,
+): Promise<TransactionResponse> {
+  return (await token(tokenAddress)).transfer(to, amountWei);
 }

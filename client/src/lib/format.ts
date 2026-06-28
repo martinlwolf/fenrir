@@ -24,12 +24,27 @@ export function shortAddress(address: string | null | undefined): string {
   return `${address.slice(0, 6)}…${address.slice(-4)}`;
 }
 
+/** Compara dos direcciones sin importar checksum/mayusculas. */
+export function sameAddress(
+  a: string | null | undefined,
+  b: string | null | undefined,
+): boolean {
+  return !!a && !!b && a.toLowerCase() === b.toLowerCase();
+}
+
 /** ISO datetime -> fecha local corta. */
 export function formatDate(iso: string | null | undefined): string {
   if (!iso) return "—";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "—";
   return d.toLocaleString("es-AR", { dateStyle: "medium", timeStyle: "short" });
+}
+
+/** True si el deadline ISO ya pasó (sirve para habilitar "Finalizar votación"). */
+export function isPast(iso: string | null | undefined): boolean {
+  if (!iso) return false;
+  const t = new Date(iso).getTime();
+  return !Number.isNaN(t) && t < Date.now();
 }
 
 /** Tiempo restante hasta un deadline ISO, en formato corto. */

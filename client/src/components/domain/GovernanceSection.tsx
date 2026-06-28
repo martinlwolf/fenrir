@@ -1,12 +1,18 @@
 import { useProposals } from "@/hooks/useProposals";
+import { useArbiter } from "@/hooks/useArbiter";
+import { useWallet } from "@/providers/WalletProvider";
 import { VotePanel } from "./VotePanel";
 import { ArbiterElectionPanel } from "./ArbiterElectionPanel";
 import { LoadingState, EmptyState, ErrorState } from "./states";
+import { sameAddress } from "@/lib/format";
 import type { ProjectDetailResponse } from "@shared/schemas/project.schema";
 
 // Lista las propuestas del proyecto y renderiza el panel adecuado segun el kind.
 export function GovernanceSection({ project }: { project: ProjectDetailResponse }) {
   const { data, isLoading, isError, refetch } = useProposals(project.address);
+  const { address } = useWallet();
+  const arbiter = useArbiter(project.address);
+  const isArbiter = sameAddress(arbiter.data?.currentArbiter, address);
 
   if (isLoading) return <LoadingState label="Cargando propuestas…" />;
   if (isError) return <ErrorState onRetry={() => void refetch()} />;
@@ -29,6 +35,7 @@ export function GovernanceSection({ project }: { project: ProjectDetailResponse 
             projectAddress={project.address}
             governorAddress={project.governorAddress}
             proposal={proposal}
+            isArbiter={isArbiter}
           />
         ),
       )}

@@ -7,8 +7,13 @@ import { LoadingState, EmptyState } from "./states";
 import { useWallet } from "@/providers/WalletProvider";
 import { useOffers, useDistribution } from "@/hooks/useOffers";
 import { useWrite } from "@/hooks/useWrite";
-import { castDeveloperSaleVote, claimDistribution } from "@/lib/chain/contracts";
-import { formatWei, shortAddress } from "@/lib/format";
+import {
+  castDeveloperSaleVote,
+  castVote,
+  claimDistribution,
+  executeSale,
+} from "@/lib/chain/contracts";
+import { formatWei, sameAddress, shortAddress } from "@/lib/format";
 import type { ProjectDetailResponse } from "@shared/schemas/project.schema";
 import type { SaleOfferResponse } from "@shared/schemas/sale.schema";
 
@@ -16,15 +21,32 @@ function OfferRow({
   offer,
   governorAddress,
   projectAddress,
+  developerWallet,
 }: {
   offer: SaleOfferResponse;
   governorAddress: string;
   projectAddress: string;
+  developerWallet: string;
 }) {
   const { address, isOnSepolia } = useWallet();
-  const { phase, error, run } = useWrite([["offers", projectAddress]]);
+  const { phase, error, run } = useWrite([
+    ["offers", projectAddress],
+    ["proposals", projectAddress],
+  ]);
   const busy = phase === "signing" || phase === "mining" || phase === "propagating";
   const votable = offer.status === "Voting" && offer.proposalId != null;
+  // Voto role-aware: el developer (sin FDT) usa castDeveloperSaleVote; el inversor vota con
+  // su peso por FDT vía castVote. Llamar castDeveloperSaleVote como inversor revierte.
+  const isDeveloper = sameAddress(address, developerWallet);
+
+  function voteOffer(support: boolean) {
+    const proposalId = offer.proposalId as number;
+    void run(() =>
+      isDeveloper
+        ? castDeveloperSaleVote(governorAddress, proposalId, support)
+        : castVote(governorAddress, proposalId, support),
+    );
+  }
 
   return (
     <div className="flex flex-col gap-2 border-b py-3 last:border-0 sm:flex-row sm:items-center sm:justify-between">
@@ -38,23 +60,10 @@ function OfferRow({
       </div>
       {votable && address && isOnSepolia && (
         <div className="flex gap-2">
-          <Button
-            size="sm"
-            disabled={busy}
-            onClick={() =>
-              void run(() => castDeveloperSaleVote(governorAddress, offer.proposalId as number, true))
-            }
-          >
+          <Button size="sm" disabled={busy} onClick={() => voteOffer(true)}>
             A favor
           </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={busy}
-            onClick={() =>
-              void run(() => castDeveloperSaleVote(governorAddress, offer.proposalId as number, false))
-            }
-          >
+          <Button size="sm" variant="outline" disabled={busy} onClick={() => voteOffer(false)}>
             En contra
           </Button>
         </div>
@@ -112,11 +121,46 @@ function DistributionPanel({ project }: { project: ProjectDetailResponse }) {
   );
 }
 
+// Banner para concretar la venta tras aprobarse una oferta. Sin executeSale no se fija el
+// salePrice ni se habilita el reparto. Cualquiera puede ejecutarla.
+function ExecuteSaleBanner({ project }: { project: ProjectDetailResponse }) {
+  const { address, isOnSepolia } = useWallet();
+  const { phase, error, run } = useWrite([
+    ["project", project.address],
+    ["offers", project.address],
+    ["distribution", project.address],
+  ]);
+  const busy = phase === "signing" || phase === "mining" || phase === "propagating";
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base">Venta aprobada</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        <p className="text-sm text-muted-foreground">
+          Hay una oferta aprobada. Ejecutá la venta para fijar el precio y habilitar el reparto.
+        </p>
+        {address && isOnSepolia && (
+          <Button size="sm" disabled={busy} onClick={() => void run(() => executeSale(project.address))}>
+            {busy ? "Procesando…" : "Ejecutar venta"}
+          </Button>
+        )}
+        <TxFeedback phase={phase} error={error} />
+      </CardContent>
+    </Card>
+  );
+}
+
 export function SaleSection({ project }: { project: ProjectDetailResponse }) {
   const offers = useOffers(project.address);
+  const hasApproved = offers.data?.some((o) => o.status === "Approved") ?? false;
+  const canExecuteSale = project.status === "Selling" && hasApproved;
 
   return (
     <div className="space-y-4">
+      {canExecuteSale && <ExecuteSaleBanner project={project} />}
+
       <Card>
         <CardHeader className="flex-row items-center justify-between pb-2">
           <CardTitle className="text-base">Ofertas de compra</CardTitle>
@@ -134,6 +178,7 @@ export function SaleSection({ project }: { project: ProjectDetailResponse }) {
                 offer={o}
                 governorAddress={project.governorAddress}
                 projectAddress={project.address}
+                developerWallet={project.developerWallet}
               />
             ))
           )}
