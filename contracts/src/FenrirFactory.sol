@@ -1,13 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-// import "@openzeppelin/contracts/token/ERC721/ERC721.sol"; // import de remix
+// import "@openzeppelin/contracts/token/ERC721@5.0.1/ERC721.sol"; // import de remix
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol"; // import local
 
 import "./FenrirToken.sol";
 import "./FenrirGovernor.sol";
 import "./FenrirProject.sol";
 import "./interfaces/IFenrirFactoryCallback.sol";
+import "./deployers/TokenDeployer.sol";
+import "./deployers/GovernorDeployer.sol";
+import "./deployers/ProjectDeployer.sol";
 
 /// Soulbound: se emite una sola vez por proyecto exitoso y queda fija en la wallet del
 /// desarrollador para siempre (no transferible).
@@ -169,14 +172,11 @@ contract FenrirFactory is IFenrirFactoryCallback {
             "FenrirFactory: Investment requires token-weighted voting"
         );
 
-        FenrirToken token = new FenrirToken(tokenName, tokenSymbol);
-        FenrirGovernor governor = new FenrirGovernor(
-            address(token),
-            votingMode
-        );
-        FenrirProject project = new FenrirProject(
-            address(token),
-            address(governor),
+        address token = TokenDeployer.deploy(tokenName, tokenSymbol);
+        address governor = GovernorDeployer.deploy(token, votingMode);
+        address project = ProjectDeployer.deploy(
+            token,
+            governor,
             msg.sender,
             projectType,
             fmpa,
@@ -187,17 +187,18 @@ contract FenrirFactory is IFenrirFactoryCallback {
             estimatedSalePrice
         );
 
-        token.initialize(address(project), address(governor));
-        governor.initialize(address(project));
+        // initialize las llama la Factory directo -> msg.sender == factory, pasa el require
+        FenrirToken(token).initialize(project, governor);
+        FenrirGovernor(governor).initialize(project);
 
-        isFenrirProject[address(project)] = true;
-        allProjects.push(address(project));
-        projectAddress = address(project);
+        isFenrirProject[project] = true;
+        allProjects.push(project);
+        projectAddress = project;
 
         emit ProjectCreated(
             projectAddress,
-            address(token),
-            address(governor),
+            token,
+            governor,
             msg.sender,
             projectType
         );

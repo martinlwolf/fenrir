@@ -13,5 +13,5 @@
     "skipLibCheck": true,
     "noEmit": true
   },
-  "include": ["schemas/**/*.ts", "constants/**/*.ts", "types/**/*.ts"]
+  "include": ["schemas/**/*.ts", "constants/**/*.ts", "types/**/*.ts", "chain/**/*.ts"]
 }

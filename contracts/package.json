@@ -1,5 +1,11 @@
 {
+  "scripts": {
+    "compile": "hardhat compile",
+    "deploy:sepolia": "node scripts/deploy.mjs"
+  },
   "devDependencies": {
+    "dotenv": "^17.4.2",
+    "ethers": "^6.17.0",
     "hardhat": "^3.9.0"
   },
   "dependencies": {

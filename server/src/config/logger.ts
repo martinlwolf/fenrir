@@ -12,7 +12,13 @@ export const logger = pino({
   transport: env.LOG_PRETTY
     ? {
         target: "pino-pretty",
-        options: { colorize: true, translateTime: "SYS:standard", ignore: "pid,hostname" },
+        options: {
+          colorize: true,
+          translateTime: "SYS:HH:MM:ss.l",
+          ignore: "pid,hostname",
+          singleLine: false,
+          errorLikeObjectKeys: ["err", "error"],
+        },
       }
     : undefined,
 });

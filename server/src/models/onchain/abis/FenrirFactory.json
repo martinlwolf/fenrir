@@ -1,9 +1,0 @@
-[
-  "event DeveloperRegistered(address indexed wallet, string razonSocial, string cuit)",
-  "event ProjectCreated(address indexed project, address indexed token, address indexed governor, address developer, uint8 projectType)",
-  "function developers(address) view returns (string razonSocial, string cuit, bool registered)",
-  "function projectsCount() view returns (uint256)",
-  "function allProjects(uint256) view returns (address)",
-  "function completionCertificate() view returns (address)",
-  "function failureCertificate() view returns (address)"
-]

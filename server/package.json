@@ -4,6 +4,7 @@
   "private": true,
   "description": "Backend de Fenrir: API REST + espejo on-chain (Express + TypeScript)",
   "scripts": {
+    "predev": "prisma migrate deploy",
     "dev": "tsx watch --env-file=.env src/index.ts",
     "build": "esbuild src/index.ts --bundle --platform=node --target=node20 --format=cjs --packages=external --tsconfig=tsconfig.json --outfile=dist/index.js",
     "start": "node --env-file=.env dist/index.js",

@@ -1,15 +1,15 @@
-// ABIs de los 4 contratos de /contracts, en formato Human-Readable de ethers
-// (solo eventos + las pocas funciones view que el backend lee). Los contratos se
-// compilan/despliegan manualmente via Remix (constitution Principio IV); aca solo
-// vive lo necesario para escuchar eventos y leer estado puntual.
-import FenrirFactory from "./FenrirFactory.json";
-import FenrirProject from "./FenrirProject.json";
-import FenrirGovernor from "./FenrirGovernor.json";
-import FenrirToken from "./FenrirToken.json";
+// Las ABIs de los 4 contratos viven en shared/ (fuente unica compartida con el client).
+// Aca solo se reexponen con la forma `ABIS` que consumen el listener y el provider.
+import {
+  FENRIR_FACTORY_ABI,
+  FENRIR_GOVERNOR_ABI,
+  FENRIR_PROJECT_ABI,
+  FENRIR_TOKEN_ABI,
+} from "@shared/chain/abis";
 
 export const ABIS = {
-  FenrirFactory: FenrirFactory as string[],
-  FenrirProject: FenrirProject as string[],
-  FenrirGovernor: FenrirGovernor as string[],
-  FenrirToken: FenrirToken as string[],
+  FenrirFactory: FENRIR_FACTORY_ABI,
+  FenrirProject: FENRIR_PROJECT_ABI,
+  FenrirGovernor: FENRIR_GOVERNOR_ABI,
+  FenrirToken: FENRIR_TOKEN_ABI,
 };
