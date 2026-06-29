@@ -4,6 +4,7 @@
 // backend nunca "decide" una transicion (FR-020). Es la capa habilitada a hablar con el
 // RPC (skill backend-architecture).
 import { ZeroAddress, ZeroHash } from "ethers";
+import { logger } from "../config/logger";
 import {
   toMilestoneStatus,
   toOfferStatus,
@@ -42,6 +43,7 @@ export class SyncService {
 
   // Relee y persiste el estado completo de un proyecto (+ sus hitos) desde on-chain.
   async hydrateProject(address: string, createdAtBlock?: bigint): Promise<void> {
+    logger.debug({ address }, "hidratando proyecto desde on-chain");
     const project = projectContract(address);
 
     const [
@@ -83,6 +85,7 @@ export class SyncService {
       governor.arbiter() as Promise<string>,
     ]);
 
+    const status = toProjectStatus(statusRaw);
     await this.projects.upsertProjectRow({
       address,
       tokenAddress: tokenAddr,
@@ -90,7 +93,7 @@ export class SyncService {
       developerWallet: developerAddr,
       projectType: toProjectType(projectTypeRaw),
       votingMode: toVotingMode(votingModeRaw),
-      status: toProjectStatus(statusRaw),
+      status,
       fmpa,
       ff,
       totalRaised,
@@ -126,13 +129,32 @@ export class SyncService {
         proposalId: Number(m.proposalId) > 0 ? Number(m.proposalId) : null,
       });
     }
+
+    logger.info(
+      {
+        address,
+        status,
+        currentMilestoneIndex: Number(currentMilestoneIndexRaw),
+        totalRaised: totalRaised.toString(),
+        currentArbiter: nonZeroAddress(arbiter),
+      },
+      "proyecto rehidratado desde on-chain",
+    );
   }
 
   // Relee y persiste el estado de una propuesta desde el governor que la emitio.
   async hydrateProposal(governorAddress: string, governorProposalId: number): Promise<void> {
     const projectAddress = await this.projects.findAddressByGovernor(governorAddress);
-    if (!projectAddress) return; // governor de un proyecto aun no espejado: el ciclo lo recupera luego
+    if (!projectAddress) {
+      // governor de un proyecto aun no espejado: el ciclo lo recupera luego
+      logger.warn(
+        { governorAddress, governorProposalId },
+        "propuesta de un governor sin proyecto espejado todavia: se reintenta en el proximo ciclo",
+      );
+      return;
+    }
 
+    logger.debug({ projectAddress, governorProposalId }, "hidratando propuesta desde on-chain");
     const governor = governorContract(governorAddress);
     const p = await governor.proposals(governorProposalId);
 
@@ -159,10 +181,15 @@ export class SyncService {
       result: toProposalResult(p.result as bigint),
       electedArbiter,
     });
+    logger.info(
+      { projectAddress, governorProposalId, kind, status },
+      "propuesta rehidratada desde on-chain",
+    );
   }
 
   // Relee y persiste el estado de una oferta de venta desde el contrato del proyecto.
   async hydrateSaleOffer(projectAddress: string, offerId: number): Promise<void> {
+    logger.debug({ projectAddress, offerId }, "hidratando oferta de venta desde on-chain");
     const project = projectContract(projectAddress);
     const o = await project.saleOffers(offerId);
     await this.offers.upsertOfferRow({
@@ -173,6 +200,10 @@ export class SyncService {
       proposalId: Number(o.proposalId) > 0 ? Number(o.proposalId) : null,
       status: toOfferStatus(o.status as bigint),
     });
+    logger.info(
+      { projectAddress, offerId, status: toOfferStatus(o.status as bigint) },
+      "oferta de venta rehidratada desde on-chain",
+    );
   }
 }
 

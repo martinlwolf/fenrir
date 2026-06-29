@@ -76,7 +76,11 @@ export class OnChainListener {
       blockNumber: log.blockNumber,
       eventName: parsed.name,
     } as OnChainEventMeta;
-    
+
+    logger.info(
+      { event: parsed.name, address: log.address, block: log.blockNumber, tx: log.transactionHash },
+      "evento on-chain detectado",
+    );
     await this.ingestion.applyOnce(meta, () =>
       handler({ args: parsed.args, address: log.address, meta }),
     );
@@ -89,6 +93,9 @@ export class OnChainListener {
     toBlock: number,
   ): Promise<void> {
     const logs = await this.provider.getLogs({ address, fromBlock, toBlock });
+    if (logs.length > 0) {
+      logger.info({ address, fromBlock, toBlock, count: logs.length }, "logs encontrados al escanear contrato");
+    }
     // Orden estable por bloque y logIndex para reflejar transiciones en orden.
     logs.sort((a, b) => a.blockNumber - b.blockNumber || a.index - b.index);
     for (const log of logs) {
@@ -99,15 +106,27 @@ export class OnChainListener {
   private async runCycle(): Promise<void> {
     const head = await this.provider.getBlockNumber();
     const safeBlock = head - env.INGESTION_CONFIRMATIONS;
-    if (safeBlock < 0) return;
+    if (safeBlock < 0) {
+      logger.debug(
+        { head, confirmations: env.INGESTION_CONFIRMATIONS },
+        "todavia no hay suficientes bloques confirmados: se espera al siguiente ciclo",
+      );
+      return;
+    }
 
     const cursor = await this.ingestion.loadCursor(SCOPE, env.INGESTION_START_BLOCK); // el ultimo bloque que ya procese
     const from = cursor === BigInt(env.INGESTION_START_BLOCK) ? Number(cursor) : Number(cursor) + 1;
-    if (from > safeBlock) return;
+    logger.debug({ head, safeBlock, cursor: cursor.toString(), from }, "ciclo de polling: estado del cursor");
+    if (from > safeBlock) {
+      logger.debug({ from, safeBlock }, "sin bloques nuevos para procesar");
+      return;
+    }
 
     const batch = env.INGESTION_BACKFILL_BATCH;
+    logger.info({ from, to: safeBlock, blocksPendientes: safeBlock - from + 1 }, "procesando bloques nuevos");
     for (let start = from; start <= safeBlock; start += batch) {
       const end = Math.min(start + batch - 1, safeBlock);
+      logger.debug({ start, end }, "escaneando chunk de bloques");
 
       // 1) Factory primero: crea/actualiza developers y proyectos en este rango.
       await this.scan(env.FENRIR_FACTORY_ADDRESS, this.factory, start, end);
@@ -121,18 +140,24 @@ export class OnChainListener {
       }
 
       await this.ingestion.saveCursor(SCOPE, BigInt(end));
+      logger.debug({ cursor: end }, "cursor de ingestion guardado");
     }
   }
 
   private async tick(): Promise<void> {
-    if (this.running) return; // evita solapamiento de ciclos
+    if (this.running) {
+      logger.debug("ciclo de polling anterior todavia en curso: se omite este tick");
+      return;
+    }
     this.running = true;
+    const startedAt = Date.now();
     try {
       await this.runCycle();
     } catch (err) {
       logger.error({ err }, "error en ciclo de ingestion");
     } finally {
       this.running = false;
+      logger.debug({ ms: Date.now() - startedAt }, "ciclo de polling finalizado");
     }
   }
 }
