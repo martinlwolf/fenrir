@@ -13,6 +13,24 @@ import { buildApiRouter } from "./routes";
 export function buildApp(): Express {
   const app = express();
 
+  app.use((req, res, next) => {
+    const allowedOrigin = env.FRONTEND_URL;
+
+    if (allowedOrigin && req.headers.origin === allowedOrigin) {
+      res.setHeader("Access-Control-Allow-Origin", allowedOrigin);
+      res.setHeader("Access-Control-Allow-Credentials", "true");
+    }
+
+    if (req.method === "OPTIONS") {
+      res.setHeader("Access-Control-Allow-Methods", "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS");
+      res.setHeader("Access-Control-Allow-Headers", "Content-Type,Authorization");
+      res.status(204).end();
+      return;
+    }
+
+    next();
+  });
+
   app.use(express.json({ limit: "1mb" }));
 
   // Archivos de reportes servidos estaticamente (driver local). El contenido en

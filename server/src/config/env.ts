@@ -20,6 +20,7 @@ const envSchema = z.object({
   REPORT_STORAGE_DRIVER: z.enum(["local"]).default("local"),
   REPORT_STORAGE_LOCAL_DIR: z.string().default("./.data/reports"),
   PUBLIC_BASE_URL: z.string().url().default("http://localhost:4000"),
+  FRONTEND_URL: z.string().url().optional(),
 
   AUTH_NONCE_TTL_MINUTES: z.coerce.number().int().positive().default(10),
 
