@@ -39,6 +39,7 @@ services:
       REPORT_STORAGE_DRIVER: ${REPORT_STORAGE_DRIVER:-local}
       REPORT_STORAGE_LOCAL_DIR: /app/server/.data/reports
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:4000}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
       AUTH_NONCE_TTL_MINUTES: ${AUTH_NONCE_TTL_MINUTES:-10}
     ports:
       - "4000:4000"
