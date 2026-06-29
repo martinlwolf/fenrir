@@ -1,5 +1,8 @@
 // Lectura y validacion de variables de entorno con Zod (fail-fast). Ninguna otra
 // parte del codigo lee process.env directamente (constitution Principio V).
+// Carga el archivo .env (dev local). En docker/prod las variables vienen del entorno y
+// dotenv no las pisa ni falla si el archivo no existe.
+import "dotenv/config";
 import { z } from "zod";
 
 const envSchema = z.object({

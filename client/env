@@ -1,0 +1,11 @@
+# Base de la API REST del backend (server/).
+VITE_API_URL=http://localhost:4000
+
+# Red on-chain: Sepolia.
+VITE_SEPOLIA_CHAIN_ID=11155111
+
+# Direccion del FenrirFactory desplegado en Sepolia (alta de developer / creacion de proyecto).
+VITE_FENRIR_FACTORY_ADDRESS=0xB6e8dc6432D56438B7119f6fB1cC0AFBb86F5451
+
+# true => sirve las lecturas con MSW (sin backend). false => API real.
+VITE_USE_MOCK=true

@@ -13,6 +13,21 @@ import { buildApiRouter } from "./routes";
 export function buildApp(): Express {
   const app = express();
 
+  // CORS: el frontend (Vite en :5173, deploy en Vercel) consume esta API desde otro
+  // origen. La auth es por header (Authorization: Wallet <...>), no por cookie, asi que
+  // reflejar el origin y permitir ese header alcanza. Responde el preflight OPTIONS.
+  app.use((req, res, next) => {
+    res.header("Access-Control-Allow-Origin", req.headers.origin ?? "*");
+    res.header("Vary", "Origin");
+    res.header("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
+    res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    if (req.method === "OPTIONS") {
+      res.sendStatus(204);
+      return;
+    }
+    next();
+  });
+
   app.use(express.json({ limit: "1mb" }));
 
   // Archivos de reportes servidos estaticamente (driver local). El contenido en
