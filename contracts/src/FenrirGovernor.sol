@@ -6,6 +6,13 @@ import "./interfaces/IFenrirGovernorArbiter.sol";
 import "./interfaces/IFenrirVotesToken.sol";
 import "./interfaces/IFenrirProjectCallback.sol";
 import "./interfaces/IFenrirGovernorMinimal.sol";
+import {
+    VOTING_PERIOD,
+    QUORUM_BPS,
+    APPROVAL_THRESHOLD_BPS,
+    DEVELOPER_SALE_VOTE_WEIGHT,
+    BPS_DENOMINATOR
+} from "./FenrirConstants.sol";
 
 /// @title FenrirGovernor
 /// @notice Motor de votacion de un proyecto Fenrir, inspirado en el patron Governor de
@@ -35,11 +42,6 @@ contract FenrirGovernor is ERC1155, IFenrirGovernorArbiter, IFenrirGovernorMinim
         Rejected
     }
 
-    uint256 public constant QUORUM_BPS = 5100;
-    uint256 public constant APPROVAL_THRESHOLD_BPS = 5100;
-    uint256 public constant VOTING_PERIOD = 1 minutes;
-    uint256 private constant BPS_DENOMINATOR = 10000;
-    uint256 private constant DEVELOPER_SALE_VOTE_WEIGHT = 1 ether;
 
     struct Proposal {
         ProposalKind kind; // qué tipo (árbitro/hito/venta)

@@ -6,6 +6,12 @@ import "./interfaces/IFenrirProjectCallback.sol";
 import "./interfaces/IFenrirTokenMinimal.sol";
 import "./interfaces/IFenrirGovernorMinimal.sol";
 import "./interfaces/IFenrirFactoryCallback.sol";
+import {
+    COMMISSION_BPS,
+    MAX_RETRIES_PER_MILESTONE,
+    RETRY_WINDOW,
+    BPS_DENOMINATOR
+} from "./FenrirConstants.sol";
 
 /// @title FenrirProject
 /// @notice Custodia los fondos de un proyecto Fenrir, en tranches por hito, y conduce su
@@ -36,10 +42,6 @@ contract FenrirProject is ReentrancyGuard, IFenrirProjectCallback {
         OfferStatus status;
     }
 
-    uint256 public constant COMMISSION_BPS = 1000;
-    uint256 public constant MAX_RETRIES_PER_MILESTONE = 2;
-    uint256 public constant RETRY_WINDOW = 2 minutes;
-    uint256 private constant BPS_DENOMINATOR = 10000;
 
     address public immutable factory;
     address public immutable developer;

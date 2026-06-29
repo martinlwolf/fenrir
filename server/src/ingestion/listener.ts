@@ -6,6 +6,7 @@
 // en el siguiente ciclo, sin perder ni duplicar eventos (FR-005, SC-005).
 import { Interface, type Log, type Provider } from "ethers";
 import { env } from "../config/env";
+import { POLL_INTERVAL_MS } from "../config/constants";
 import { logger } from "../config/logger";
 import { ABIS } from "../models/onchain/abis";
 import { provider as defaultProvider } from "../models/onchain/provider";
@@ -32,7 +33,6 @@ class EventSource {
 }
 
 const SCOPE = "main";
-const POLL_INTERVAL_MS = 10_000;
 
 export class OnChainListener {
   private readonly factory = new EventSource(ABIS.FenrirFactory, factoryHandlers);
