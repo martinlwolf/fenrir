@@ -39,7 +39,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       const signature = await signMessage(message);
       const result = await verifySignature(address, signature);
       if (!result.valid) throw new Error("La firma no pudo verificarse.");
-      setWalletAuth(`Wallet ${signature}`);
+      setWalletAuth({ address, signature });
       setAuthedWallet(address);
     } finally {
       setAuthenticating(false);
