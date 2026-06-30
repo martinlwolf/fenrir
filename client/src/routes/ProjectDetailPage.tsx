@@ -1,4 +1,4 @@
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { useProject } from "@/hooks/useProject";
 import { FundingSummary } from "@/components/domain/FundingSummary";
@@ -20,6 +20,7 @@ const TYPE_LABEL = { Investment: "Inversión", Civic: "Cívico" } as const;
 
 export function ProjectDetailPage() {
   const { address } = useParams<{ address: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { data: project, isLoading, isError, refetch } = useProject(address);
 
   if (isLoading) return <LoadingState label="Cargando proyecto…" />;
@@ -30,6 +31,12 @@ export function ProjectDetailPage() {
         onRetry={() => void refetch()}
       />
     );
+
+  // Pestaña activa controlada por ?tab= (permite el deep-link "Ir a votar" -> Gobernanza).
+  const saleTabAvailable = project.status === "Selling" || project.status === "Completed";
+  const validTabs = ["summary", "governance", ...(saleTabAvailable ? ["sale"] : [])];
+  const requestedTab = searchParams.get("tab") ?? "summary";
+  const activeTab = validTabs.includes(requestedTab) ? requestedTab : "summary";
 
   return (
     <div className="space-y-6">
@@ -62,7 +69,7 @@ export function ProjectDetailPage() {
 
       <p className="font-mono text-xs text-muted-foreground">{project.address}</p>
 
-      <Tabs defaultValue="summary">
+      <Tabs value={activeTab} onValueChange={(v) => setSearchParams({ tab: v }, { replace: true })}>
         <TabsList>
           <TabsTrigger value="summary">Resumen</TabsTrigger>
           <TabsTrigger value="governance">Gobernanza</TabsTrigger>

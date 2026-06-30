@@ -29,7 +29,9 @@ export class Milestone {
     return {
       milestoneIndex: p.milestoneIndex,
       budget: p.budget.toString(),
-      durationSeconds: p.durationSeconds !== null ? p.durationSeconds.toString() : null,
+      // `!= null` (no `!== null`) para cubrir tambien `undefined` (p.ej. Prisma Client
+      // desactualizado o filas sin la columna): el schema admite null.
+      durationSeconds: p.durationSeconds != null ? p.durationSeconds.toString() : null,
       deadline: p.deadline ? p.deadline.toISOString() : null,
       status: p.status,
       retryCount: p.retryCount,

@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { CheckCircle2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -14,8 +16,9 @@ import {
 import { TxFeedback } from "@/components/domain/TxFeedback";
 import { useWallet } from "@/providers/WalletProvider";
 import { useWrite } from "@/hooks/useWrite";
+import { useDeveloper } from "@/hooks/useDeveloper";
 import { createProject, registerDeveloper } from "@/lib/chain/contracts";
-import { ethToWei } from "@/lib/format";
+import { ethToWei, shortAddress } from "@/lib/format";
 import {
   PROJECT_TYPE,
   VOTING_MODE,
@@ -34,10 +37,29 @@ export function CreateProjectPage() {
   const navigate = useNavigate();
   const { address, isOnSepolia, connect, switchNetwork, hasWallet } = useWallet();
 
-  const register = useWrite();
+  // Identidad on-chain de la wallet conectada: si ya esta registrada como developer,
+  // mostramos sus datos y no dejamos registrar de nuevo.
+  const {
+    data: developer,
+    isLoading: devLoading,
+    refetch: refetchDeveloper,
+  } = useDeveloper(address ?? undefined);
+  const isRegistered = !!developer;
+
+  const register = useWrite(address ? [["developer", address]] : []);
   const create = useWrite();
   const [razonSocial, setRazonSocial] = useState("");
   const [cuit, setCuit] = useState("");
+
+  // Tras confirmar el alta on-chain, el backend tarda en espejar el evento; reintentamos
+  // leer la identidad para que la tarjeta pase a "Registrado" sin recargar.
+  useEffect(() => {
+    if (register.phase !== "confirmed") return;
+    const timers = [1500, 5000, 10000].map((ms) =>
+      setTimeout(() => void refetchDeveloper(), ms),
+    );
+    return () => timers.forEach(clearTimeout);
+  }, [register.phase, refetchDeveloper]);
 
   const [tokenName, setTokenName] = useState("");
   const [tokenSymbol, setTokenSymbol] = useState("");
@@ -112,27 +134,49 @@ export function CreateProjectPage() {
 
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">1. Registrar identidad (una vez)</CardTitle>
+          <CardTitle className="text-base">1. Identidad de developer</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="razon">Razón social</Label>
-              <Input id="razon" value={razonSocial} onChange={(e) => setRazonSocial(e.target.value)} />
+          {devLoading ? (
+            <p className="text-sm text-muted-foreground">Verificando tu registro…</p>
+          ) : developer ? (
+            <div className="flex items-start justify-between gap-3 rounded-md border bg-muted/40 p-3">
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="size-4 text-emerald-600" />
+                  <span className="font-medium">{developer.razonSocial}</span>
+                </div>
+                <p className="text-sm text-muted-foreground">CUIT {developer.cuit}</p>
+                <p className="text-xs text-muted-foreground">{shortAddress(developer.wallet)}</p>
+              </div>
+              <Badge variant="success">Registrado</Badge>
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="cuit">CUIT</Label>
-              <Input id="cuit" value={cuit} onChange={(e) => setCuit(e.target.value)} />
-            </div>
-          </div>
-          <Button
-            variant="outline"
-            disabled={register.phase === "signing" || register.phase === "mining" || !razonSocial || !cuit}
-            onClick={() => void register.run(() => registerDeveloper(razonSocial, cuit))}
-          >
-            Registrar developer
-          </Button>
-          <TxFeedback phase={register.phase} error={register.error} />
+          ) : (
+            <>
+              <p className="text-sm text-muted-foreground">
+                Esta wallet todavía no está registrada como developer. Registrate una vez para
+                poder crear proyectos.
+              </p>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="razon">Razón social</Label>
+                  <Input id="razon" value={razonSocial} onChange={(e) => setRazonSocial(e.target.value)} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="cuit">CUIT</Label>
+                  <Input id="cuit" value={cuit} onChange={(e) => setCuit(e.target.value)} />
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                disabled={register.phase === "signing" || register.phase === "mining" || !razonSocial || !cuit}
+                onClick={() => void register.run(() => registerDeveloper(razonSocial, cuit))}
+              >
+                Registrar developer
+              </Button>
+              <TxFeedback phase={register.phase} error={register.error} />
+            </>
+          )}
         </CardContent>
       </Card>
 
@@ -244,8 +288,13 @@ export function CreateProjectPage() {
           </div>
 
           {formError && <p className="text-sm text-destructive">{formError}</p>}
+          {!isRegistered && !devLoading && (
+            <p className="text-sm text-muted-foreground">
+              Registrate como developer (paso 1) para poder crear el proyecto.
+            </p>
+          )}
           <TxFeedback phase={create.phase} error={create.error} />
-          <Button onClick={() => void onCreate()} disabled={busyCreate}>
+          <Button onClick={() => void onCreate()} disabled={busyCreate || !isRegistered}>
             {busyCreate ? "Procesando…" : "Crear proyecto"}
           </Button>
         </CardContent>
