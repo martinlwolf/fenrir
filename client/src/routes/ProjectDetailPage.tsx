@@ -9,6 +9,7 @@ import { DeveloperInfoCard } from "@/components/domain/DeveloperInfoCard";
 import { SaleSection } from "@/components/domain/SaleSection";
 import { ClaimCommissionPanel } from "@/components/domain/ClaimCommissionPanel";
 import { MaintenancePanel } from "@/components/domain/MaintenancePanel";
+import { RefundPanel } from "@/components/domain/RefundPanel";
 import { ProjectStatusBadge } from "@/components/domain/StatusBadge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -78,6 +79,9 @@ export function ProjectDetailPage() {
       </div>
 
       <p className="font-mono text-xs text-muted-foreground">{project.address}</p>
+
+      {/* Reembolso leido on-chain: aparece aunque el backend no haya espejado la cancelacion. */}
+      <RefundPanel projectAddress={project.address} />
 
       <Tabs value={activeTab} onValueChange={(v) => setSearchParams({ tab: v }, { replace: true })}>
         <TabsList>

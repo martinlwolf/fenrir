@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { CheckCircle2, Vote, XCircle } from "lucide-react";
+import { CheckCircle2, Gavel, Vote, XCircle } from "lucide-react";
 import { useMyProposalsFeed } from "@/hooks/useMyVotableProposals";
 import { useWallet } from "@/providers/WalletProvider";
 import { shortAddress, timeRemaining } from "@/lib/format";
@@ -22,20 +22,24 @@ interface Seen {
   result: ProposalResultValue;
 }
 
-// Estado a NIVEL DE MODULO (no useRef): sobrevive a remontajes del componente al navegar,
-// asi que cambiar de pantalla NO re-dispara avisos de votaciones ya conocidas. Se
-// re-siembra solo cuando cambia la wallet o se recarga la pagina.
-let seededFor: string | null = null;
-const notifiedOpen = new Set<string>();
-const lastSeen = new Map<string, Seen>();
-
-// Watcher invisible montado una vez en App. Cada inversor lo corre en su sesion y solo
-// recibe avisos de EVENTOS NUEVOS (votaciones que se abren o se resuelven mientras esta
-// mirando), nunca de las que ya existian al entrar.
+// Watcher invisible montado en App (vive en cualquier vista). Cada inversor lo corre en su
+// propia sesion: vigila las propuestas de SUS proyectos y avisa por toast apenas el backend
+// refleja el evento, sin importar en que pantalla este parado:
+//  - cuando se ABRE una votacion del proyecto (a todos los inversores, puedan votar o no);
+//    si la wallet puede votar, el boton lleva directo a Gobernanza.
+//  - cuando la votacion se RESUELVE (aprobada/rechazada).
+//  - cuando una votacion queda TRABADA esperando al arbitro, solo a la wallet arbitro, con
+//    un boton directo al desempate.
+// Las resoluciones solo se avisan en la transicion observada en la sesion (no spamea el
+// historial al cargar).
 export function VoteNotifications() {
   const { data } = useMyProposalsFeed();
   const { address } = useWallet();
   const navigate = useNavigate();
+  const prev = useRef<Map<string, Seen>>(new Map());
+  const openNotified = useRef<Set<string>>(new Set());
+  const arbiterNotified = useRef<Set<string>>(new Set());
+  const initialized = useRef(false);
 
   useEffect(() => {
     if (!data) return;
@@ -55,7 +59,7 @@ export function VoteNotifications() {
       return;
     }
 
-    for (const { proposal, projectAddress, canVote } of data) {
+    for (const { proposal, projectAddress, canVote, isArbiter } of data) {
       const key = `${projectAddress}:${proposal.governorProposalId}`;
       const before = lastSeen.get(key);
       const kind = KIND_LABEL[proposal.kind];
@@ -82,8 +86,34 @@ export function VoteNotifications() {
         notifiedOpen.delete(key);
       }
 
-      // 2) Resolucion NUEVA: transicion a Resolved observada mientras miraba.
-      if (before && before.status !== "Resolved" && proposal.status === "Resolved") {
+      // 2) Trabada esperando desempate: avisar UNA vez, solo si la wallet es el arbitro.
+      const awaitingArbiter = proposal.status === "AwaitingArbiter";
+      if (awaitingArbiter && isArbiter && !arbiterNotified.current.has(key)) {
+        arbiterNotified.current.add(key);
+        toast.warning(`Desempate pendiente · ${kind}`, {
+          id: `${key}:arbiter`,
+          icon: <Gavel className="size-4" />,
+          description: `Proyecto ${shortAddress(projectAddress)} · empate o falta de quórum, tu voto define`,
+          duration: Infinity,
+          action: {
+            label: "Ir a desempatar",
+            onClick: () => navigate(`/projects/${projectAddress}?tab=governance`),
+          },
+        });
+      }
+      // Cuando deja de estar trabada, sacamos el toast de desempate.
+      if (!awaitingArbiter && arbiterNotified.current.has(key)) {
+        toast.dismiss(`${key}:arbiter`);
+        arbiterNotified.current.delete(key);
+      }
+
+      // 3) Resolucion (aprobada/rechazada), solo en la transicion vista en esta sesion.
+      const justResolved =
+        initialized.current &&
+        before &&
+        before.status !== "Resolved" &&
+        proposal.status === "Resolved";
+      if (justResolved) {
         const goToProject = () => navigate(`/projects/${projectAddress}`);
         if (proposal.result === "Approved") {
           toast.success(`${kind} · aprobada ✅`, {
