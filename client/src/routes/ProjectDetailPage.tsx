@@ -15,8 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LoadingState, ErrorState } from "@/components/domain/states";
-import { useWallet } from "@/providers/WalletProvider";
-import { formatWei, isPast, sameAddress, shortAddress } from "@/lib/format";
+import { formatWei, shortAddress } from "@/lib/format";
 
 const TYPE_LABEL = { Investment: "Inversión", Civic: "Cívico" } as const;
 
@@ -24,7 +23,6 @@ export function ProjectDetailPage() {
   const { address } = useParams<{ address: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const { data: project, isLoading, isError, refetch } = useProject(address);
-  const { address: wallet } = useWallet();
 
   if (isLoading) return <LoadingState label="Cargando proyecto…" />;
   if (isError || !project)
@@ -44,19 +42,6 @@ export function ProjectDetailPage() {
   const validTabs = ["summary", "governance", ...(saleTabAvailable ? ["sale"] : [])];
   const requestedTab = searchParams.get("tab") ?? "summary";
   const activeTab = validTabs.includes(requestedTab) ? requestedTab : "summary";
-
-  // La ronda de inversión sigue abierta entre el FMPA y el FF: alcanzar el FMPA arranca la
-  // obra (status Building) pero NO cierra la ronda; recién se cierra al llegar al FF
-  // (business_rules/fondeo-y-comision.md). Espejamos el require on-chain de invest():
-  // status ∈ {Funding, Building} && !roundClosed (derivado de totalRaised >= ff), y antes del
-  // FMPA (Funding) además corre el TTL de fondeo.
-  const roundOpen =
-    BigInt(project.totalRaised) < BigInt(project.ff) &&
-    (project.status === "Building" ||
-      (project.status === "Funding" && !isPast(project.fundingDeadline)));
-  // El contrato prohíbe que el developer invierta en su propio proyecto
-  // (FenrirProject.invest: "developer cannot invest"), así que no le mostramos el botón.
-  const isDeveloper = sameAddress(wallet, project.developerWallet);
 
   return (
     <div className="space-y-6">
@@ -80,11 +65,10 @@ export function ProjectDetailPage() {
         <span className="text-sm text-muted-foreground">
           {project.investorCount} inversores · FDT emitido: {formatWei(project.totalRaised)}
         </span>
-        {roundOpen && !isDeveloper && (
-          <div className="ml-auto">
-            <InvestDialog projectAddress={project.address} />
-          </div>
-        )}
+        {/* Botón siempre visible: el contrato valida estado/ronda/rol al firmar invest(). */}
+        <div className="ml-auto">
+          <InvestDialog projectAddress={project.address} />
+        </div>
       </div>
 
       <p className="font-mono text-xs text-muted-foreground">{project.address}</p>
