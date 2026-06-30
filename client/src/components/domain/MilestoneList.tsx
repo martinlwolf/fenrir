@@ -79,13 +79,17 @@ export function MilestoneList({
   milestones,
   projectAddress,
   developerWallet,
+  obraStarted,
 }: {
   milestones: MilestoneResponse[];
   projectAddress: string;
   developerWallet: string;
+  /** El proyecto ya arranco obra (Building + arbitro electo): recien ahi el contrato
+   *  acepta declareMilestone (FenrirProject.sol). Antes el proyecto sigue en Funding. */
+  obraStarted: boolean;
 }) {
   const { address } = useWallet();
-  const canDeclare = !!address && address === developerWallet;
+  const canDeclare = obraStarted && !!address && address === developerWallet;
 
   // Deadline de votacion por propuesta, para marcar "Votación vencida" cuando el plazo paso
   // pero la propuesta sigue Active (aun no se llamo resolve() on-chain).

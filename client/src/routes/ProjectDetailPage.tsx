@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LoadingState, ErrorState } from "@/components/domain/states";
-import { formatWei, shortAddress } from "@/lib/format";
+import { formatWei, isPast, shortAddress } from "@/lib/format";
 
 const TYPE_LABEL = { Investment: "Inversión", Civic: "Cívico" } as const;
 
@@ -38,6 +38,16 @@ export function ProjectDetailPage() {
   const requestedTab = searchParams.get("tab") ?? "summary";
   const activeTab = validTabs.includes(requestedTab) ? requestedTab : "summary";
 
+  // La ronda de inversión sigue abierta entre el FMPA y el FF: alcanzar el FMPA arranca la
+  // obra (status Building) pero NO cierra la ronda; recién se cierra al llegar al FF
+  // (business_rules/fondeo-y-comision.md). Espejamos el require on-chain de invest():
+  // status ∈ {Funding, Building} && !roundClosed (derivado de totalRaised >= ff), y antes del
+  // FMPA (Funding) además corre el TTL de fondeo.
+  const roundOpen =
+    BigInt(project.totalRaised) < BigInt(project.ff) &&
+    (project.status === "Building" ||
+      (project.status === "Funding" && !isPast(project.fundingDeadline)));
+
   return (
     <div className="space-y-6">
       <Button variant="ghost" size="sm" asChild>
@@ -60,7 +70,7 @@ export function ProjectDetailPage() {
         <span className="text-sm text-muted-foreground">
           {project.investorCount} inversores · FDT emitido: {formatWei(project.totalRaised)}
         </span>
-        {project.status === "Funding" && (
+        {roundOpen && (
           <div className="ml-auto">
             <InvestDialog projectAddress={project.address} />
           </div>
@@ -93,6 +103,9 @@ export function ProjectDetailPage() {
                 milestones={project.milestones}
                 projectAddress={project.address}
                 developerWallet={project.developerWallet}
+                // Solo se puede declarar un hito una vez arrancada la obra: el proyecto llego al
+                // FMPA (status Building) y se resolvio el hito 0 / se eligio arbitro (currentArbiter).
+                obraStarted={project.status === "Building" && project.currentArbiter != null}
               />
             </div>
           </div>

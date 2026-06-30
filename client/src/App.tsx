@@ -8,6 +8,7 @@ import { MyPortfolioPage } from "@/routes/MyPortfolioPage";
 import { DeveloperProfilePage } from "@/routes/DeveloperProfilePage";
 import { MarketplacePage } from "@/routes/MarketplacePage";
 import { CreateProjectPage } from "@/routes/CreateProjectPage";
+import { RegisterDeveloperPage } from "@/routes/RegisterDeveloperPage";
 import { LandingPage } from "@/routes/LandingPage";
 
 // Layout de la app: header global + container. La landing va por fuera (full-bleed).
@@ -36,6 +37,7 @@ export function App() {
           <Route path="/portfolio" element={<MyPortfolioPage />} />
           <Route path="/developers/:wallet" element={<DeveloperProfilePage />} />
           <Route path="/marketplace" element={<MarketplacePage />} />
+          <Route path="/developers/register" element={<RegisterDeveloperPage />} />
           <Route path="/create" element={<CreateProjectPage />} />
         </Route>
       </Routes>

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -44,11 +45,15 @@ export function VotePanel({
     ["proposals", projectAddress],
     ["voting-power", projectAddress, proposal.governorProposalId, address],
   ]);
+  // El cierre ya confirmo en cadena pero el espejo del backend tarda hasta un ciclo de
+  // polling en reflejarlo (D4). Ocultamos el boton de inmediato para no mostrarlo junto al
+  // "confirmado"; el polling de useProposals termina de actualizar el estado.
+  const [justResolved, setJustResolved] = useState(false);
   const busy = phase === "signing" || phase === "mining" || phase === "propagating";
   const active = proposal.status === "Active";
   const expired = isPast(proposal.deadline);
   // Vencida y sin auto-resolver: cualquiera puede cerrarla (no voto el 100% del poder).
-  const canResolve = active && expired;
+  const canResolve = active && expired && !justResolved;
   // Trabada por empate/falta de quorum: solo el arbitro la destraba.
   const awaitingArbiter = proposal.status === "AwaitingArbiter";
 
@@ -109,7 +114,11 @@ export function VotePanel({
               size="sm"
               variant="secondary"
               disabled={busy}
-              onClick={() => void run(() => resolve(governorAddress, proposal.governorProposalId))}
+              onClick={() =>
+                void run(() => resolve(governorAddress, proposal.governorProposalId)).then((ok) => {
+                  if (ok) setJustResolved(true);
+                })
+              }
             >
               {busy ? "Procesando…" : "Finalizar votación"}
             </Button>
@@ -117,6 +126,12 @@ export function VotePanel({
               La votación venció y no se resolvió sola. Cualquiera puede cerrarla.
             </p>
           </div>
+        )}
+
+        {active && expired && justResolved && (
+          <p className="pt-2 text-xs text-muted-foreground">
+            Votación cerrada. Actualizando el estado…
+          </p>
         )}
 
         {awaitingArbiter && isArbiter && address && isOnSepolia && (

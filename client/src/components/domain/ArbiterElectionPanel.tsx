@@ -38,10 +38,14 @@ export function ArbiterElectionPanel({
   const investors = useProjectInvestors(projectAddress);
   const [candidate, setCandidate] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
+  // El cierre ya confirmo en cadena pero el espejo del backend tarda hasta un ciclo de
+  // polling en reflejarlo (D4): ocultamos el boton de inmediato para no mostrarlo junto al
+  // "confirmado"; el polling de useProposals termina de actualizar el estado.
+  const [justResolved, setJustResolved] = useState(false);
   const busy = phase === "signing" || phase === "mining" || phase === "propagating";
   const active = proposal.status === "Active";
   const expired = isPast(proposal.deadline);
-  const canResolve = active && expired;
+  const canResolve = active && expired && !justResolved;
   const candidates = investors.data ?? [];
   const hasCandidates = candidates.length > 0;
 
@@ -114,10 +118,17 @@ export function ArbiterElectionPanel({
             size="sm"
             variant="secondary"
             disabled={busy}
-            onClick={() => void run(() => resolve(governorAddress, proposal.governorProposalId))}
+            onClick={() =>
+              void run(() => resolve(governorAddress, proposal.governorProposalId)).then((ok) => {
+                if (ok) setJustResolved(true);
+              })
+            }
           >
             {busy ? "Procesando…" : "Finalizar elección"}
           </Button>
+        )}
+        {active && expired && justResolved && (
+          <p className="text-xs text-muted-foreground">Elección cerrada. Actualizando el estado…</p>
         )}
         <TxFeedback phase={phase} error={error} />
       </CardContent>

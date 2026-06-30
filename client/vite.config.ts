@@ -6,6 +6,9 @@ import path from "node:path";
 // @/* apunta a client/src para los imports de shadcn/ui.
 export default defineConfig({
   plugins: [react()],
+  // Las env vars (incluidas las VITE_*) viven en el .env de la raiz del repo, no en client/.
+  // Asi hay una unica fuente de verdad compartida con el backend.
+  envDir: path.resolve(__dirname, ".."),
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

@@ -83,19 +83,37 @@ export class SyncService {
     const token = tokenContract(tokenAddr);
     // name()/symbol() son inmutables (se fijan al crear el token), pero releerlos en cada
     // hidratacion mantiene el espejo siempre poblado sin un camino especial de creacion.
-    const [votingModeRaw, arbiter, tokenName, tokenSymbol] = await Promise.all([
+    let tokenName = "";
+    let tokenSymbol = "";
+    const [votingModeRaw, arbiter] = await Promise.all([
       governor.votingMode() as Promise<bigint>,
       governor.arbiter() as Promise<string>,
-      token.name() as Promise<string>,
-      token.symbol() as Promise<string>,
     ]);
+    try {
+      logger.debug({ address, tokenAddr }, "leyendo name()/symbol() del token on-chain");
+      [tokenName, tokenSymbol] = await Promise.all([
+        token.name() as Promise<string>,
+        token.symbol() as Promise<string>,
+      ]);
+      logger.info(
+        { address, tokenAddr, tokenName, tokenSymbol },
+        "name()/symbol() del token leidos desde on-chain",
+      );
+    } catch (err) {
+      // No abortar la hidratacion por esto: el resto del estado del proyecto es valido.
+      // Dejamos el simbolo/nombre vacios y lo registramos para diagnostico.
+      logger.error(
+        { err, address, tokenAddr },
+        "fallo leyendo name()/symbol() del token: el proyecto queda sin nombre/simbolo",
+      );
+    }
 
     const status = toProjectStatus(statusRaw);
     await this.projects.upsertProjectRow({
       address,
       tokenAddress: tokenAddr,
-      tokenName,
-      tokenSymbol,
+      tokenName: tokenName || null,
+      tokenSymbol: tokenSymbol || null,
       governorAddress: governorAddr,
       developerWallet: developerAddr,
       projectType: toProjectType(projectTypeRaw),
