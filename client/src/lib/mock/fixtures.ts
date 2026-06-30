@@ -13,6 +13,10 @@ export const mockProjects: ProjectDetailResponse[] = [
   {
     address: addr("a1"),
     tokenAddress: addr("b1"),
+    tokenName: "Edificio Roca",
+    tokenSymbol: "ROCA",
+    developerRazonSocial: "Constructora del Norte S.A.",
+    investorCount: 12,
     governorAddress: addr("c1"),
     developerWallet: addr("d1"),
     projectType: "Investment",
@@ -32,6 +36,7 @@ export const mockProjects: ProjectDetailResponse[] = [
       {
         milestoneIndex: 0,
         budget: ETH(4),
+        durationSeconds: "604800",
         deadline: new Date(Date.now() - 86400000).toISOString(),
         status: "Approved",
         retryCount: 0,
@@ -43,6 +48,7 @@ export const mockProjects: ProjectDetailResponse[] = [
       {
         milestoneIndex: 1,
         budget: ETH(10),
+        durationSeconds: "604800",
         deadline: new Date(Date.now() + 86400000).toISOString(),
         status: "Voting",
         retryCount: 0,
@@ -54,6 +60,7 @@ export const mockProjects: ProjectDetailResponse[] = [
       {
         milestoneIndex: 2,
         budget: ETH(26),
+        durationSeconds: "1209600",
         deadline: null,
         status: "Pending",
         retryCount: 0,
@@ -67,6 +74,10 @@ export const mockProjects: ProjectDetailResponse[] = [
   {
     address: addr("a2"),
     tokenAddress: addr("b2"),
+    tokenName: "Plaza Belgrano",
+    tokenSymbol: "PLBG",
+    developerRazonSocial: "Obras Cívicas del Sur S.R.L.",
+    investorCount: 34,
     governorAddress: addr("c2"),
     developerWallet: addr("d2"),
     projectType: "Civic",
@@ -86,6 +97,7 @@ export const mockProjects: ProjectDetailResponse[] = [
       {
         milestoneIndex: 0,
         budget: ETH(8),
+        durationSeconds: "604800",
         deadline: null,
         status: "Approved",
         retryCount: 0,
@@ -97,6 +109,7 @@ export const mockProjects: ProjectDetailResponse[] = [
       {
         milestoneIndex: 1,
         budget: ETH(12),
+        durationSeconds: "1209600",
         deadline: new Date(Date.now() + 2 * 86400000).toISOString(),
         status: "Declared",
         retryCount: 1,
@@ -110,6 +123,10 @@ export const mockProjects: ProjectDetailResponse[] = [
   {
     address: addr("a3"),
     tokenAddress: addr("b3"),
+    tokenName: "Torre Mitre",
+    tokenSymbol: "MITRE",
+    developerRazonSocial: "Constructora del Norte S.A.",
+    investorCount: 8,
     governorAddress: addr("c3"),
     developerWallet: addr("d1"),
     projectType: "Investment",
@@ -130,6 +147,10 @@ export const mockProjects: ProjectDetailResponse[] = [
   {
     address: addr("a4"),
     tokenAddress: addr("b4"),
+    tokenName: "Escuela Sarmiento",
+    tokenSymbol: "SARM",
+    developerRazonSocial: "Fundación Aula Abierta",
+    investorCount: 3,
     governorAddress: addr("c4"),
     developerWallet: addr("d3"),
     projectType: "Civic",

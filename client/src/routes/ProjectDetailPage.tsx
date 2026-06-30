@@ -1,25 +1,30 @@
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { useProject } from "@/hooks/useProject";
 import { FundingSummary } from "@/components/domain/FundingSummary";
 import { MilestoneList } from "@/components/domain/MilestoneList";
 import { InvestDialog } from "@/components/domain/InvestDialog";
 import { GovernanceSection } from "@/components/domain/GovernanceSection";
+import { DeveloperInfoCard } from "@/components/domain/DeveloperInfoCard";
 import { SaleSection } from "@/components/domain/SaleSection";
 import { ClaimCommissionPanel } from "@/components/domain/ClaimCommissionPanel";
 import { MaintenancePanel } from "@/components/domain/MaintenancePanel";
+import { RefundPanel } from "@/components/domain/RefundPanel";
 import { ProjectStatusBadge } from "@/components/domain/StatusBadge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LoadingState, ErrorState } from "@/components/domain/states";
-import { formatWei, shortAddress } from "@/lib/format";
+import { useWallet } from "@/providers/WalletProvider";
+import { formatWei, isPast, sameAddress, shortAddress } from "@/lib/format";
 
 const TYPE_LABEL = { Investment: "Inversión", Civic: "Cívico" } as const;
 
 export function ProjectDetailPage() {
   const { address } = useParams<{ address: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { data: project, isLoading, isError, refetch } = useProject(address);
+  const { address: wallet } = useWallet();
 
   if (isLoading) return <LoadingState label="Cargando proyecto…" />;
   if (isError || !project)
@@ -30,6 +35,29 @@ export function ProjectDetailPage() {
       />
     );
 
+  // Pestaña activa controlada por ?tab= (permite el deep-link "Ir a votar" -> Gobernanza).
+  // Solo los proyectos de Inversión tienen etapa de venta; los Cívicos no
+  // (FenrirProject: "civic has no sale stage"), así que nunca mostramos la pestaña Venta.
+  const saleTabAvailable =
+    project.projectType === "Investment" &&
+    (project.status === "Selling" || project.status === "Completed");
+  const validTabs = ["summary", "governance", ...(saleTabAvailable ? ["sale"] : [])];
+  const requestedTab = searchParams.get("tab") ?? "summary";
+  const activeTab = validTabs.includes(requestedTab) ? requestedTab : "summary";
+
+  // La ronda de inversión sigue abierta entre el FMPA y el FF: alcanzar el FMPA arranca la
+  // obra (status Building) pero NO cierra la ronda; recién se cierra al llegar al FF
+  // (business_rules/fondeo-y-comision.md). Espejamos el require on-chain de invest():
+  // status ∈ {Funding, Building} && !roundClosed (derivado de totalRaised >= ff), y antes del
+  // FMPA (Funding) además corre el TTL de fondeo.
+  const roundOpen =
+    BigInt(project.totalRaised) < BigInt(project.ff) &&
+    (project.status === "Building" ||
+      (project.status === "Funding" && !isPast(project.fundingDeadline)));
+  // El contrato prohíbe que el developer invierta en su propio proyecto
+  // (FenrirProject.invest: "developer cannot invest"), así que no le mostramos el botón.
+  const isDeveloper = sameAddress(wallet, project.developerWallet);
+
   return (
     <div className="space-y-6">
       <Button variant="ghost" size="sm" asChild>
@@ -39,41 +67,45 @@ export function ProjectDetailPage() {
       </Button>
 
       <div className="flex flex-wrap items-center gap-3">
-        <h1 className="text-2xl font-semibold">{shortAddress(project.address)}</h1>
+        <h1 className="text-2xl font-semibold">
+          {project.tokenName ?? shortAddress(project.address)}
+        </h1>
+        {project.tokenSymbol && (
+          <Badge variant="secondary" className="font-mono">
+            {project.tokenSymbol}
+          </Badge>
+        )}
         <Badge variant="outline">{TYPE_LABEL[project.projectType]}</Badge>
         <ProjectStatusBadge status={project.status} />
         <span className="text-sm text-muted-foreground">
-          FDT emitido: {formatWei(project.totalRaised)}
+          {project.investorCount} inversores · FDT emitido: {formatWei(project.totalRaised)}
         </span>
-        {project.status === "Funding" && (
+        {roundOpen && !isDeveloper && (
           <div className="ml-auto">
             <InvestDialog projectAddress={project.address} />
           </div>
         )}
       </div>
 
-      <p className="text-sm text-muted-foreground">
-        Desarrollador:{" "}
-        <Link
-          to={`/developers/${project.developerWallet}`}
-          className="text-primary underline"
-        >
-          {shortAddress(project.developerWallet)}
-        </Link>
-      </p>
+      <p className="font-mono text-xs text-muted-foreground">{project.address}</p>
 
-      <Tabs defaultValue="summary">
+      {/* Reembolso leido on-chain: aparece aunque el backend no haya espejado la cancelacion. */}
+      <RefundPanel projectAddress={project.address} />
+
+      <Tabs value={activeTab} onValueChange={(v) => setSearchParams({ tab: v }, { replace: true })}>
         <TabsList>
           <TabsTrigger value="summary">Resumen</TabsTrigger>
           <TabsTrigger value="governance">Gobernanza</TabsTrigger>
-          {(project.status === "Selling" || project.status === "Completed") && (
-            <TabsTrigger value="sale">Venta</TabsTrigger>
-          )}
+          {saleTabAvailable && <TabsTrigger value="sale">Venta</TabsTrigger>}
         </TabsList>
         <TabsContent value="summary">
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
             <div className="space-y-6 lg:col-span-1">
               <FundingSummary project={project} />
+              <DeveloperInfoCard
+                wallet={project.developerWallet}
+                razonSocial={project.developerRazonSocial}
+              />
               <ClaimCommissionPanel project={project} />
               <MaintenancePanel project={project} />
             </div>
@@ -82,6 +114,10 @@ export function ProjectDetailPage() {
                 milestones={project.milestones}
                 projectAddress={project.address}
                 developerWallet={project.developerWallet}
+                totalRaised={project.totalRaised}
+                // Solo se puede declarar un hito una vez arrancada la obra: el proyecto llego al
+                // FMPA (status Building) y se resolvio el hito 0 / se eligio arbitro (currentArbiter).
+                obraStarted={project.status === "Building" && project.currentArbiter != null}
               />
             </div>
           </div>
@@ -89,7 +125,7 @@ export function ProjectDetailPage() {
         <TabsContent value="governance">
           <GovernanceSection project={project} />
         </TabsContent>
-        {(project.status === "Selling" || project.status === "Completed") && (
+        {saleTabAvailable && (
           <TabsContent value="sale">
             <SaleSection project={project} />
           </TabsContent>

@@ -28,6 +28,11 @@ export class ProjectController {
     const { address } = addressParamSchema.parse(req.params);
     res.json(await this.projects.getMilestones(address));
   };
+
+  investors = async (req: Request, res: Response): Promise<void> => {
+    const { address } = addressParamSchema.parse(req.params);
+    res.json(await this.projects.getInvestors(address));
+  };
 }
 
 export const projectController = new ProjectController();

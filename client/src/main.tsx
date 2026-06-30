@@ -10,6 +10,12 @@ import { SessionProvider } from "./providers/SessionProvider";
 import "./index.css";
 
 async function bootstrap() {
+  // Al levantar, dejamos claro a donde apunta el front (API backend, factory on-chain y si
+  // esta corriendo contra los mocks de MSW).
+  console.info(
+    `[fenrir] API: ${env.apiUrl}${env.useMock ? " (MOCK)" : ""} | factory: ${env.factoryAddress} | chainId: ${env.sepoliaChainId}`,
+  );
+
   if (env.useMock) {
     const { startMockWorker } = await import("./lib/mock/browser");
     await startMockWorker();

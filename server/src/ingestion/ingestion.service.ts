@@ -1,6 +1,7 @@
 // Nucleo de ingestion idempotente. Todo handler de evento se ejecuta a traves de
 // applyOnce: si el evento (txHash, logIndex) ya fue procesado, se ignora. Esto cubre
 // eventos fuera de orden, duplicados por reconexion y reorgs cortos (FR-005, SC-005).
+import { logger } from "../config/logger";
 import { IngestionRepository, ingestionRepository } from "../persistence/repositories/ingestion.repository";
 
 // Forma minima de un log de ethers que necesitamos para deduplicar y trazar.
@@ -20,7 +21,13 @@ export class IngestionService {
       meta.index,
       meta.eventName,
     );
-    if (!fresh) return; // ya procesado: no-op idempotente
+    if (!fresh) {
+      logger.debug(
+        { tx: meta.transactionHash, index: meta.index, event: meta.eventName },
+        "evento ya procesado: se ignora (idempotencia)",
+      );
+      return;
+    }
     await handler();
   }
 

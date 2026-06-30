@@ -94,6 +94,11 @@ model Developer {
 model Project {
   address                  String        @id
   tokenAddress             String        @unique
+  // Nombre y simbolo del FDT, elegidos por el developer al crear el proyecto. No viajan en
+  // ProjectCreated: se leen on-chain (token.name()/symbol()) al hidratar. Son el identificador
+  // legible del proyecto en la UI.
+  tokenName                String?
+  tokenSymbol              String?
   governorAddress          String        @unique
   developerWallet          String
   projectType              ProjectType
@@ -130,6 +135,9 @@ model Milestone {
   projectAddress  String
   milestoneIndex  Int
   budget          Decimal         @db.Decimal(78, 0)
+  // Plazo (segundos) que tendra el hito al activarse. Conocido desde la creacion del proyecto,
+  // a diferencia de `deadline` que es la fecha absoluta y solo existe una vez activado.
+  durationSeconds BigInt?
   deadline        DateTime?
   status          MilestoneStatus @default(Pending)
   retryCount      Int             @default(0)

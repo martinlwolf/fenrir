@@ -6,6 +6,12 @@ import "./interfaces/IFenrirProjectCallback.sol";
 import "./interfaces/IFenrirTokenMinimal.sol";
 import "./interfaces/IFenrirGovernorMinimal.sol";
 import "./interfaces/IFenrirFactoryCallback.sol";
+import {
+    COMMISSION_BPS,
+    MAX_RETRIES_PER_MILESTONE,
+    RETRY_WINDOW,
+    BPS_DENOMINATOR
+} from "./FenrirConstants.sol";
 
 /// @title FenrirProject
 /// @notice Custodia los fondos de un proyecto Fenrir, en tranches por hito, y conduce su
@@ -36,10 +42,6 @@ contract FenrirProject is ReentrancyGuard, IFenrirProjectCallback {
         OfferStatus status;
     }
 
-    uint256 public constant COMMISSION_BPS = 1000;
-    uint256 public constant MAX_RETRIES_PER_MILESTONE = 2;
-    uint256 public constant RETRY_WINDOW = 2 minutes;
-    uint256 private constant BPS_DENOMINATOR = 10000;
 
     address public immutable factory;
     address public immutable developer;
@@ -56,6 +58,7 @@ contract FenrirProject is ReentrancyGuard, IFenrirProjectCallback {
     bool public fmpaReached;
     bool public roundClosed; // se llego al ff?
     bool public obraStarted;
+    bool public arbiterElectionOpened; // la eleccion de arbitro ya fue creada (post-FMPA)
 
     uint256 public totalRaised;               // cuánto ETH entró en total
     uint256 public totalReleasedToDeveloper;  // cuánto ya se le pagó al developer
@@ -71,7 +74,9 @@ contract FenrirProject is ReentrancyGuard, IFenrirProjectCallback {
     Milestone[] public milestones;
     uint256 public currentMilestoneIndex;
     uint256[] private _cumulativeBudget;
-    uint256[] private _milestoneDurations;
+    // Publico: el plazo (en segundos) que tendra cada hito una vez activado. Se fija al crear
+    // el proyecto; la fecha absoluta (Milestone.deadline) recien se calcula al activarse el hito.
+    uint256[] public milestoneDurations;
 
     mapping(uint256 => SaleOffer) public saleOffers;
     uint256 public nextOfferId = 1;
@@ -79,6 +84,7 @@ contract FenrirProject is ReentrancyGuard, IFenrirProjectCallback {
     uint256 public salePrice;
 
     event Invested(address indexed investor, uint256 amount);
+    event FmpaReached(uint256 totalRaised);
     event ArbiterElectionStarted(uint256 proposalId);
     event FundingRoundClosed(uint256 totalRaised); // cuando se llega al FMPA?
     event ArbiterElected(address indexed newArbiter);
@@ -121,7 +127,7 @@ contract FenrirProject is ReentrancyGuard, IFenrirProjectCallback {
         for (uint256 i = 0; i < milestoneBudgets_.length; i++) {
             sum += milestoneBudgets_[i];
             _cumulativeBudget.push(sum);
-            _milestoneDurations.push(milestoneDurations_[i]);
+            milestoneDurations.push(milestoneDurations_[i]);
             milestones.push(Milestone({
                 budget: milestoneBudgets_[i],
                 deadline: 0,
@@ -173,7 +179,11 @@ contract FenrirProject is ReentrancyGuard, IFenrirProjectCallback {
         if (!fmpaReached && totalRaised >= fmpa) {
             fmpaReached = true;
             status = ProjectStatus.Building;
-            emit ArbiterElectionStarted(governor.proposeArbiterElection());
+            // NO se crea aca la eleccion de arbitro: el snapshot de la propuesta es block.number-1,
+            // asi que el inversor que cruza el FMPA (minteado en ESTE bloque) tendria 0 poder de
+            // voto. La eleccion se abre con openArbiterElection() en un bloque posterior, cuando
+            // el snapshot ya incluye a todos los que fondearon hasta el FMPA. Ver decisiones-pendientes.md.
+            emit FmpaReached(totalRaised);
         }
 
         if (!roundClosed && totalRaised >= ff) {
@@ -198,6 +208,19 @@ contract FenrirProject is ReentrancyGuard, IFenrirProjectCallback {
     // Hito 0 -- arranque de obra
     // ---------------------------------------------------------------------
 
+    /// Abre la eleccion de arbitro una vez alcanzado el FMPA. DEBE llamarse en un bloque
+    /// POSTERIOR al de la inversion que cruzo el FMPA: el snapshot de la propuesta es
+    /// block.number-1, asi que recien en un bloque siguiente el snapshot incluye el FDT de
+    /// TODOS los que fondearon hasta el FMPA (incluido el inversor que lo disparo). Cualquiera
+    /// puede llamarla (no requiere rol). Idempotente: una sola eleccion inicial.
+    function openArbiterElection() external {
+        require(fmpaReached, "FenrirProject: FMPA not reached");
+        require(status == ProjectStatus.Building, "FenrirProject: not building");
+        require(!arbiterElectionOpened, "FenrirProject: election already opened");
+        arbiterElectionOpened = true;
+        emit ArbiterElectionStarted(governor.proposeArbiterElection());
+    }
+
     function onArbiterElected(address newArbiter) external override onlyGovernor {
         emit ArbiterElected(newArbiter);
         if (!obraStarted) {
@@ -208,7 +231,7 @@ contract FenrirProject is ReentrancyGuard, IFenrirProjectCallback {
     }
 
     function _activateMilestone(uint256 i) internal {
-        milestones[i].deadline = block.timestamp + _milestoneDurations[i];
+        milestones[i].deadline = block.timestamp + milestoneDurations[i];
     }
 
     // ---------------------------------------------------------------------

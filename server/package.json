@@ -14,7 +14,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev"
+    "prisma:migrate": "prisma migrate dev",
+    "cursor:set": "tsx --env-file=../.env scripts/set-ingestion-cursor.ts"
   },
   "prisma": {
     "schema": "prisma/schema.prisma"

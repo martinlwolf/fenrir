@@ -9,6 +9,7 @@ export interface MilestoneRowInput {
   projectAddress: string;
   milestoneIndex: number;
   budget: bigint;
+  durationSeconds: bigint;
   deadline: Date | null;
   status: MilestoneStatusValue;
   retryCount: number;
@@ -25,6 +26,7 @@ export class MilestoneRepository {
     const project = input.projectAddress.toLowerCase();
     const data = {
       budget: input.budget.toString(),
+      durationSeconds: input.durationSeconds,
       deadline: input.deadline,
       status: input.status,
       retryCount: input.retryCount,

@@ -23,7 +23,7 @@ export function buildApp(): Express {
 
     if (req.method === "OPTIONS") {
       res.setHeader("Access-Control-Allow-Methods", "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS");
-      res.setHeader("Access-Control-Allow-Headers", "Content-Type,Authorization");
+      res.setHeader("Access-Control-Allow-Headers", "Content-Type,Authorization,x-wallet-address,x-wallet-signature");
       res.status(204).end();
       return;
     }

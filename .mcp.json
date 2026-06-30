@@ -1,4 +1,3 @@
-
 {
   "mcpServers": {
     "open-pencil": {
@@ -6,6 +5,21 @@
       "env": {
         "HOST": "127.0.0.1",
         "WS_PORT": "7601"
+      }
+    },
+    "postgres": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "-e",
+        "DATABASE_URI",
+        "crystaldba/postgres-mcp",
+        "--access-mode=unrestricted"
+      ],
+      "env": {
+        "DATABASE_URI": "postgresql://fenrir:fenrir@localhost:5432/fenrir"
       }
     }
   }

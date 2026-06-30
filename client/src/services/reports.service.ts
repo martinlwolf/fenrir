@@ -18,8 +18,8 @@ export async function createReport(
 ): Promise<CreateReportResponse> {
   const form = new FormData();
   form.append("text", input.text);
-  input.media?.forEach((f) => form.append("media", f));
-  input.documents?.forEach((f) => form.append("documents", f));
+  input.media?.forEach((f) => form.append("files", f));
+  input.documents?.forEach((f) => form.append("files", f));
   const { data } = await api.post(
     `/projects/${address}/milestones/${milestoneIndex}/report`,
     form,

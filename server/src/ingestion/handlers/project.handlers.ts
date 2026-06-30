@@ -1,6 +1,7 @@
 // Handlers de eventos de ciclo de vida del proyecto. Solo reflejan estado: ante cada
 // evento releen el estado autoritativo del contrato (hydrateProject) y, donde
 // corresponde, registran la fila hija (p.ej. la inversion). No deciden nada (FR-020).
+import { logger } from "../../config/logger";
 import { investmentRepository } from "../../persistence/repositories/investment.repository";
 import { developerService } from "../../services/developer.service";
 import { syncService } from "../sync.service";
@@ -11,7 +12,12 @@ import { withRehydrate } from "./withRehydrate";
 // bloque de creacion). Target y firma propios: no encaja en withRehydrate.
 const onProjectCreated = async (ctx: EventContext): Promise<void> => {
   const projectAddress = String(ctx.args.project);
+  logger.info(
+    { projectAddress, block: ctx.meta.blockNumber, tx: ctx.meta.transactionHash },
+    "ProjectCreated recibido: empezando hidratacion inicial del proyecto",
+  );
   await syncService.hydrateProject(projectAddress, BigInt(ctx.meta.blockNumber));
+  logger.info({ projectAddress }, "ProjectCreated procesado: hidratacion inicial completada");
 };
 
 // Emitido por una instancia de FenrirProject. Inserta la inversion ANTES de rehidratar

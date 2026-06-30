@@ -9,11 +9,9 @@ import type {
 } from "@shared/constants/enums";
 import type { ProposalResponse } from "@shared/schemas/proposal.schema";
 
-// Parametros globales fijos del sistema (parametros-globales.md). Se reflejan para
-// poder mostrar progreso de quorum/umbral; no se usan para decidir nada.
-export const QUORUM_BPS = 5100;
-export const APPROVAL_THRESHOLD_BPS = 5100;
-const BPS_DENOMINATOR = 10000n;
+import { QUORUM_BPS, APPROVAL_THRESHOLD_BPS, BPS_DENOMINATOR as _BPS_DENOM } from "../config/constants";
+export { QUORUM_BPS, APPROVAL_THRESHOLD_BPS };
+const BPS_DENOMINATOR = BigInt(_BPS_DENOM);
 
 export interface ProposalProps {
   governorProposalId: number;

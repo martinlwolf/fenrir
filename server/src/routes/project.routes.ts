@@ -10,6 +10,7 @@ projectRouter.get("/projects", asyncHandler(projectController.list));
 projectRouter.get("/projects/buyer-view", asyncHandler(projectController.buyerView));
 projectRouter.get("/projects/:address", asyncHandler(projectController.detail));
 projectRouter.get("/projects/:address/milestones", asyncHandler(projectController.milestones));
+projectRouter.get("/projects/:address/investors", asyncHandler(projectController.investors));
 
 registerReadPath({
   method: "get",
@@ -33,5 +34,11 @@ registerReadPath({
   method: "get",
   path: "/projects/{address}/milestones",
   summary: "Hitos de un proyecto",
+  tags: ["Projects"],
+});
+registerReadPath({
+  method: "get",
+  path: "/projects/{address}/investors",
+  summary: "Inversores del proyecto (candidatos a arbitro)",
   tags: ["Projects"],
 });

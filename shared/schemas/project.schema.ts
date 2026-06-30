@@ -18,6 +18,9 @@ export type ProjectListQuery = z.infer<typeof projectListQuerySchema>;
 export const milestoneResponseSchema = z.object({
   milestoneIndex: z.number().int(),
   budget: weiStringSchema,
+  // Plazo del hito en segundos (string, como los montos). Se conoce desde la creacion;
+  // `deadline` (fecha absoluta) recien aparece cuando el hito se activa.
+  durationSeconds: z.string().nullable(),
   deadline: z.string().datetime().nullable(),
   status: z.enum(MILESTONE_STATUS),
   retryCount: z.number().int(),
@@ -31,6 +34,14 @@ export type MilestoneResponse = z.infer<typeof milestoneResponseSchema>;
 export const projectResponseSchema = z.object({
   address: addressSchema,
   tokenAddress: addressSchema,
+  // Nombre y simbolo del FDT (elegidos por el developer al crear el proyecto): identificador
+  // legible del proyecto en la UI. null si todavia no se espejaron desde on-chain.
+  tokenName: z.string().nullable(),
+  tokenSymbol: z.string().nullable(),
+  // Razon social del developer responsable; null si aun no se espejo su identidad.
+  developerRazonSocial: z.string().nullable(),
+  // Inversores distintos del proyecto.
+  investorCount: z.number().int(),
   governorAddress: addressSchema,
   developerWallet: addressSchema,
   projectType: z.enum(PROJECT_TYPE),
@@ -62,3 +73,8 @@ export const investmentResponseSchema = z.object({
   block: z.string(),
 });
 export type InvestmentResponse = z.infer<typeof investmentResponseSchema>;
+
+// Wallets distintas que invirtieron en un proyecto. Son los candidatos validos al rol
+// de arbitro (hito 0): cualquier inversor del proyecto (business_rules/ciclo-de-hitos.md).
+export const projectInvestorsResponseSchema = z.array(addressSchema);
+export type ProjectInvestorsResponse = z.infer<typeof projectInvestorsResponseSchema>;

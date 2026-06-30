@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -44,16 +45,25 @@ export function VotePanel({
     ["proposals", projectAddress],
     ["voting-power", projectAddress, proposal.governorProposalId, address],
   ]);
+  // El cierre ya confirmo en cadena pero el espejo del backend tarda hasta un ciclo de
+  // polling en reflejarlo (D4). Ocultamos el boton de inmediato para no mostrarlo junto al
+  // "confirmado"; el polling de useProposals termina de actualizar el estado.
+  const [justResolved, setJustResolved] = useState(false);
+  // Mismo lag D4 al votar: hasVoted sale del espejo del backend, que tarda un ciclo en
+  // reflejar el VoteCast. Ocultamos los botones de inmediato apenas la firma confirma.
+  const [justVoted, setJustVoted] = useState(false);
   const busy = phase === "signing" || phase === "mining" || phase === "propagating";
   const active = proposal.status === "Active";
   const expired = isPast(proposal.deadline);
   // Vencida y sin auto-resolver: cualquiera puede cerrarla (no voto el 100% del poder).
-  const canResolve = active && expired;
+  const canResolve = active && expired && !justResolved;
   // Trabada por empate/falta de quorum: solo el arbitro la destraba.
   const awaitingArbiter = proposal.status === "AwaitingArbiter";
 
   function vote(support: boolean) {
-    void run(() => castVote(governorAddress, proposal.governorProposalId, support));
+    void run(() => castVote(governorAddress, proposal.governorProposalId, support)).then((ok) => {
+      if (ok) setJustVoted(true);
+    });
   }
 
   return (
@@ -63,8 +73,14 @@ export function VotePanel({
           <CardTitle className="text-base">
             {KIND_LABEL[proposal.kind]} #{proposal.refId}
           </CardTitle>
-          <Badge variant={active ? "warning" : "secondary"}>
-            {active ? "En votación" : proposal.status === "AwaitingArbiter" ? "Esperando árbitro" : "Resuelta"}
+          <Badge variant={active ? (expired ? "destructive" : "warning") : "secondary"}>
+            {active
+              ? expired
+                ? "Votación vencida"
+                : "En votación"
+              : proposal.status === "AwaitingArbiter"
+                ? "Esperando árbitro"
+                : "Resuelta"}
           </Badge>
         </div>
       </CardHeader>
@@ -73,7 +89,9 @@ export function VotePanel({
         <Row label="En contra" value={formatWei(proposal.votesAgainst)} />
         <Row label="Quórum" value={`${proposal.quorumBps / 100}%${proposal.quorumReached ? " ✓" : ""}`} />
         <Row label="Umbral" value={`${proposal.approvalThresholdBps / 100}%`} />
-        {active && <Row label="Tiempo restante" value={timeRemaining(proposal.deadline)} />}
+        {active && !expired && (
+          <Row label="Tiempo restante" value={timeRemaining(proposal.deadline)} />
+        )}
         {proposal.result !== "None" && (
           <Row label="Resultado" value={proposal.result === "Approved" ? "Aprobada" : "Rechazada"} />
         )}
@@ -84,7 +102,7 @@ export function VotePanel({
           />
         )}
 
-        {active && !expired && address && isOnSepolia && !power.data?.hasVoted && (
+        {active && !expired && address && isOnSepolia && !power.data?.hasVoted && !justVoted && (
           <div className="flex gap-2 pt-2">
             <Button size="sm" disabled={busy} onClick={() => vote(true)}>
               A favor
@@ -95,13 +113,23 @@ export function VotePanel({
           </div>
         )}
 
+        {active && !expired && justVoted && !power.data?.hasVoted && (
+          <p className="pt-2 text-xs text-muted-foreground">
+            Voto registrado. Actualizando el estado…
+          </p>
+        )}
+
         {canResolve && address && isOnSepolia && (
           <div className="pt-2">
             <Button
               size="sm"
               variant="secondary"
               disabled={busy}
-              onClick={() => void run(() => resolve(governorAddress, proposal.governorProposalId))}
+              onClick={() =>
+                void run(() => resolve(governorAddress, proposal.governorProposalId)).then((ok) => {
+                  if (ok) setJustResolved(true);
+                })
+              }
             >
               {busy ? "Procesando…" : "Finalizar votación"}
             </Button>
@@ -109,6 +137,12 @@ export function VotePanel({
               La votación venció y no se resolvió sola. Cualquiera puede cerrarla.
             </p>
           </div>
+        )}
+
+        {active && expired && justResolved && (
+          <p className="pt-2 text-xs text-muted-foreground">
+            Votación cerrada. Actualizando el estado…
+          </p>
         )}
 
         {awaitingArbiter && isArbiter && address && isOnSepolia && (

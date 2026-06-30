@@ -7,9 +7,11 @@ const base = env.apiUrl;
 export const developerHandlers = [
   http.get(`${base}/developers/:wallet`, ({ params }) => {
     const wallet = String(params.wallet).toLowerCase();
+    // Razon social coherente con la card: la del primer proyecto de esa wallet.
+    const project = mockProjects.find((p) => p.developerWallet === wallet);
     return HttpResponse.json({
       wallet,
-      razonSocial: "Constructora del Norte S.A.",
+      razonSocial: project?.developerRazonSocial ?? "Constructora del Norte S.A.",
       cuit: "30-71234567-8",
       verificationDocsUrl: "http://localhost:4000/docs/verif-" + wallet.slice(0, 6) + ".pdf",
     });

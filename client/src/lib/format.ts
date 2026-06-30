@@ -32,6 +32,21 @@ export function sameAddress(
   return !!a && !!b && a.toLowerCase() === b.toLowerCase();
 }
 
+/** Duracion en segundos (string) -> "7 días" / "1 semana" / "12 h" legible. */
+export function formatDuration(seconds: string | null | undefined): string {
+  if (seconds == null) return "—";
+  const s = Number(seconds);
+  if (!Number.isFinite(s) || s <= 0) return "—";
+  const days = Math.round(s / 86400);
+  if (days >= 7 && days % 7 === 0) {
+    const weeks = days / 7;
+    return `${weeks} ${weeks === 1 ? "semana" : "semanas"}`;
+  }
+  if (days >= 1) return `${days} ${days === 1 ? "día" : "días"}`;
+  const hours = Math.round(s / 3600);
+  return `${hours} h`;
+}
+
 /** ISO datetime -> fecha local corta. */
 export function formatDate(iso: string | null | undefined): string {
   if (!iso) return "—";

@@ -3,12 +3,13 @@ import { Button } from "@/components/ui/button";
 import { TxFeedback } from "./TxFeedback";
 import { useWallet } from "@/providers/WalletProvider";
 import { useWrite } from "@/hooks/useWrite";
+import { useInvestments } from "@/hooks/useInvestments";
 import {
   cancelExpiredFunding,
   cancelStalledMilestone,
   pokeFundingGates,
 } from "@/lib/chain/contracts";
-import { isPast } from "@/lib/format";
+import { isPast, sameAddress } from "@/lib/format";
 import type { ProjectDetailResponse } from "@shared/schemas/project.schema";
 
 // Acciones de mantenimiento / casos borde que destraban un proyecto. El contrato valida cada
@@ -22,6 +23,14 @@ export function MaintenancePanel({ project }: { project: ProjectDetailResponse }
   ]);
   const busy = phase === "signing" || phase === "mining" || phase === "propagating";
 
+  // ¿La wallet conectada es inversora del proyecto? Solo un inversor (FDT > 0) puede cancelar
+  // un hito estancado on-chain; el developer no invierte en su propio proyecto, así que no
+  // le ofrecemos un botón que el contrato le rechazaría.
+  const investments = useInvestments(address);
+  const isInvestor =
+    !!address &&
+    (investments.data ?? []).some((inv) => sameAddress(inv.projectAddress, project.address));
+
   // Fondeo vencido sin alcanzar el FMPA: se puede cancelar para habilitar el reembolso 100%.
   const fundingExpired =
     project.status === "Funding" &&
@@ -29,6 +38,17 @@ export function MaintenancePanel({ project }: { project: ProjectDetailResponse }
     safeLt(project.totalRaised, project.fmpa);
 
   const building = project.status === "Building";
+
+  // Hito vigente estancado (espeja cancelStalledMilestone on-chain): o el hito venció en su
+  // ventana (Pending + deadline pasado), o quedó declarado sin los fondos para abrir votación.
+  const current = project.milestones.find((m) => m.milestoneIndex === project.currentMilestoneIndex);
+  const cumulativeBudget = project.milestones
+    .filter((m) => m.milestoneIndex <= project.currentMilestoneIndex)
+    .reduce((sum, m) => sum + safeBig(m.budget), 0n);
+  const deadlineMissed = building && current?.status === "Pending" && isPast(current.deadline);
+  const stalledForFunds =
+    building && current?.status === "Declared" && safeBig(project.totalRaised) < cumulativeBudget;
+  const stalled = !!(deadlineMissed || stalledForFunds);
 
   const showCard = fundingExpired || building;
   if (!showCard) return null;
@@ -62,22 +82,32 @@ export function MaintenancePanel({ project }: { project: ProjectDetailResponse }
 
         {building && (
           <div className="space-y-2">
-            <div className="space-y-1">
-              <p className="text-sm text-muted-foreground">
-                Si un hito quedó estancado (deadline vencido o sin fondos), un inversor puede
-                cancelar el proyecto.
-              </p>
-              {ready && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={busy}
-                  onClick={() => void run(() => cancelStalledMilestone(project.address))}
-                >
-                  Cancelar hito estancado
-                </Button>
-              )}
-            </div>
+            {stalled && (
+              <div className="space-y-1 rounded-md bg-amber-50 px-2 py-1.5 dark:bg-amber-950/40">
+                <p className="text-sm text-amber-800 dark:text-amber-300">
+                  El proyecto está <strong>estancado</strong>:{" "}
+                  {deadlineMissed
+                    ? "el hito vigente venció sin que el desarrollador lo (re)declarara a tiempo"
+                    : "el hito quedó declarado pero no se juntaron los fondos para abrir su votación"}
+                  . Cualquier inversor puede cancelarlo para habilitar el reembolso proporcional de
+                  las tranches no aprobadas.
+                </p>
+                {ready && isInvestor ? (
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    disabled={busy}
+                    onClick={() => void run(() => cancelStalledMilestone(project.address))}
+                  >
+                    Cancelar proyecto estancado
+                  </Button>
+                ) : (
+                  <p className="text-xs text-amber-800/80 dark:text-amber-300/80">
+                    Solo un inversor del proyecto (que tenga FDT) puede ejecutar la cancelación.
+                  </p>
+                )}
+              </div>
+            )}
             <div className="space-y-1">
               <p className="text-sm text-muted-foreground">
                 Destrabar la liberación de tranches pendientes o la apertura de votación.
@@ -109,5 +139,13 @@ function safeLt(a: string, b: string): boolean {
     return BigInt(a) < BigInt(b);
   } catch {
     return false;
+  }
+}
+
+function safeBig(x: string): bigint {
+  try {
+    return BigInt(x);
+  } catch {
+    return 0n;
   }
 }

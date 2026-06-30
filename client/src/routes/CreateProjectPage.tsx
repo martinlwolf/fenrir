@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,7 +14,8 @@ import {
 import { TxFeedback } from "@/components/domain/TxFeedback";
 import { useWallet } from "@/providers/WalletProvider";
 import { useWrite } from "@/hooks/useWrite";
-import { createProject, registerDeveloper } from "@/lib/chain/contracts";
+import { useOnchainDeveloper } from "@/hooks/useOnchainDeveloper";
+import { createProject } from "@/lib/chain/contracts";
 import { ethToWei } from "@/lib/format";
 import {
   PROJECT_TYPE,
@@ -28,17 +29,21 @@ interface MilestoneInput {
   durationDays: string;
 }
 
-// Alta de developer (on-chain) + creacion de proyecto firmando contra el FenrirFactory
-// (FR-012). El contrato valida las reglas; la UI solo valida formato.
+// Creacion de proyecto firmando contra el FenrirFactory (FR-012). El contrato valida las
+// reglas; la UI solo valida formato. El alta de developer es prerequisito y vive en su
+// propia pantalla (/developers/register): esta pagina NO muestra el form del proyecto hasta
+// confirmar que la wallet esta registrada, para no perder datos cargados.
 export function CreateProjectPage() {
   const navigate = useNavigate();
   const { address, isOnSepolia, connect, switchNetwork, hasWallet } = useWallet();
 
-  const register = useWrite();
-  const create = useWrite();
-  const [razonSocial, setRazonSocial] = useState("");
-  const [cuit, setCuit] = useState("");
+  // Registro leído DIRECTO del factory on-chain: es lo que valida createProject. Si lo
+  // sacáramos del backend espejo, tras un redeploy del factory diría "registrado" y la
+  // creación revertiría con "developer not registered".
+  const { data: onchainDev, isLoading: devLoading } = useOnchainDeveloper(address);
+  const isRegistered = !!onchainDev?.registered;
 
+  const create = useWrite();
   const [tokenName, setTokenName] = useState("");
   const [tokenSymbol, setTokenSymbol] = useState("");
   const [projectType, setProjectType] = useState<ProjectTypeValue>("Investment");
@@ -106,39 +111,40 @@ export function CreateProjectPage() {
     );
   }
 
+  // Gate de registro: sin developer confirmado no se renderiza el form del proyecto, asi no
+  // se cargan datos que se perderian. Mientras verificamos, evitamos el parpadeo.
+  if (devLoading) {
+    return <p className="text-sm text-muted-foreground">Verificando tu registro de developer…</p>;
+  }
+  if (!isRegistered) {
+    return (
+      <div className="mx-auto max-w-2xl space-y-6">
+        <h1 className="text-2xl font-semibold">Crear proyecto</h1>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Necesitás registrarte como developer</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Solo las wallets registradas como developer pueden crear proyectos. Registrate una
+              vez y volvé acá para cargar el proyecto.
+            </p>
+            <Button asChild>
+              <Link to="/developers/register">Registrarme como developer</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <h1 className="text-2xl font-semibold">Crear proyecto</h1>
 
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">1. Registrar identidad (una vez)</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="razon">Razón social</Label>
-              <Input id="razon" value={razonSocial} onChange={(e) => setRazonSocial(e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="cuit">CUIT</Label>
-              <Input id="cuit" value={cuit} onChange={(e) => setCuit(e.target.value)} />
-            </div>
-          </div>
-          <Button
-            variant="outline"
-            disabled={register.phase === "signing" || register.phase === "mining" || !razonSocial || !cuit}
-            onClick={() => void register.run(() => registerDeveloper(razonSocial, cuit))}
-          >
-            Registrar developer
-          </Button>
-          <TxFeedback phase={register.phase} error={register.error} />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">2. Datos del proyecto</CardTitle>
+          <CardTitle className="text-base">Datos del proyecto</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

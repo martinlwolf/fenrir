@@ -12,15 +12,16 @@ export const api = axios.create({
 });
 
 /** Credencial de sesion por firma de wallet; la setea el SessionProvider tras /auth/verify. */
-let walletAuthHeader: string | null = null;
+let walletAuth: { address: string; signature: string } | null = null;
 
-export function setWalletAuth(header: string | null): void {
-  walletAuthHeader = header;
+export function setWalletAuth(auth: { address: string; signature: string } | null): void {
+  walletAuth = auth;
 }
 
 api.interceptors.request.use((config) => {
-  if (walletAuthHeader) {
-    config.headers.set("Authorization", walletAuthHeader);
+  if (walletAuth) {
+    config.headers.set("x-wallet-address", walletAuth.address);
+    config.headers.set("x-wallet-signature", walletAuth.signature);
   }
   return config;
 });

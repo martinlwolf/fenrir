@@ -4,6 +4,7 @@
 // backend nunca "decide" una transicion (FR-020). Es la capa habilitada a hablar con el
 // RPC (skill backend-architecture).
 import { ZeroAddress, ZeroHash } from "ethers";
+import { logger } from "../config/logger";
 import {
   toMilestoneStatus,
   toOfferStatus,
@@ -14,7 +15,7 @@ import {
   toProposalStatus,
   toVotingMode,
 } from "../models/onchain/enums";
-import { governorContract, projectContract } from "../models/onchain/provider";
+import { governorContract, projectContract, tokenContract } from "../models/onchain/provider";
 import { MilestoneRepository, milestoneRepository } from "../persistence/repositories/milestone.repository";
 import { ProjectRepository, projectRepository } from "../persistence/repositories/project.repository";
 import { ProposalRepository, proposalRepository } from "../persistence/repositories/proposal.repository";
@@ -42,6 +43,7 @@ export class SyncService {
 
   // Relee y persiste el estado completo de un proyecto (+ sus hitos) desde on-chain.
   async hydrateProject(address: string, createdAtBlock?: bigint): Promise<void> {
+    logger.debug({ address }, "hidratando proyecto desde on-chain");
     const project = projectContract(address);
 
     const [
@@ -78,19 +80,45 @@ export class SyncService {
 
     const developerAddr = (await project.developer()) as string;
     const governor = governorContract(governorAddr);
+    const token = tokenContract(tokenAddr);
+    // name()/symbol() son inmutables (se fijan al crear el token), pero releerlos en cada
+    // hidratacion mantiene el espejo siempre poblado sin un camino especial de creacion.
+    let tokenName = "";
+    let tokenSymbol = "";
     const [votingModeRaw, arbiter] = await Promise.all([
       governor.votingMode() as Promise<bigint>,
       governor.arbiter() as Promise<string>,
     ]);
+    try {
+      logger.debug({ address, tokenAddr }, "leyendo name()/symbol() del token on-chain");
+      [tokenName, tokenSymbol] = await Promise.all([
+        token.name() as Promise<string>,
+        token.symbol() as Promise<string>,
+      ]);
+      logger.info(
+        { address, tokenAddr, tokenName, tokenSymbol },
+        "name()/symbol() del token leidos desde on-chain",
+      );
+    } catch (err) {
+      // No abortar la hidratacion por esto: el resto del estado del proyecto es valido.
+      // Dejamos el simbolo/nombre vacios y lo registramos para diagnostico.
+      logger.error(
+        { err, address, tokenAddr },
+        "fallo leyendo name()/symbol() del token: el proyecto queda sin nombre/simbolo",
+      );
+    }
 
+    const status = toProjectStatus(statusRaw);
     await this.projects.upsertProjectRow({
       address,
       tokenAddress: tokenAddr,
+      tokenName: tokenName || null,
+      tokenSymbol: tokenSymbol || null,
       governorAddress: governorAddr,
       developerWallet: developerAddr,
       projectType: toProjectType(projectTypeRaw),
       votingMode: toVotingMode(votingModeRaw),
-      status: toProjectStatus(statusRaw),
+      status,
       fmpa,
       ff,
       totalRaised,
@@ -108,15 +136,17 @@ export class SyncService {
     // evita el N+1 secuencial). Los upserts se hacen despues, en orden, para no
     // presionar el pool de conexiones.
     const count = Number(milestonesCountRaw);
-    const rawMilestones = await Promise.all(
-      Array.from({ length: count }, (_, i) => project.milestones(i)),
-    );
+    const [rawMilestones, rawDurations] = await Promise.all([
+      Promise.all(Array.from({ length: count }, (_, i) => project.milestones(i))),
+      Promise.all(Array.from({ length: count }, (_, i) => project.milestoneDurations(i))),
+    ]);
     for (let i = 0; i < count; i++) {
       const m = rawMilestones[i];
       await this.milestones.upsertMilestoneRow({
         projectAddress: address,
         milestoneIndex: i,
         budget: m.budget as bigint,
+        durationSeconds: rawDurations[i] as bigint,
         deadline: deadlineToDate(m.deadline as bigint),
         status: toMilestoneStatus(m.status as bigint),
         retryCount: Number(m.retryCount),
@@ -126,13 +156,32 @@ export class SyncService {
         proposalId: Number(m.proposalId) > 0 ? Number(m.proposalId) : null,
       });
     }
+
+    logger.info(
+      {
+        address,
+        status,
+        currentMilestoneIndex: Number(currentMilestoneIndexRaw),
+        totalRaised: totalRaised.toString(),
+        currentArbiter: nonZeroAddress(arbiter),
+      },
+      "proyecto rehidratado desde on-chain",
+    );
   }
 
   // Relee y persiste el estado de una propuesta desde el governor que la emitio.
   async hydrateProposal(governorAddress: string, governorProposalId: number): Promise<void> {
     const projectAddress = await this.projects.findAddressByGovernor(governorAddress);
-    if (!projectAddress) return; // governor de un proyecto aun no espejado: el ciclo lo recupera luego
+    if (!projectAddress) {
+      // governor de un proyecto aun no espejado: el ciclo lo recupera luego
+      logger.warn(
+        { governorAddress, governorProposalId },
+        "propuesta de un governor sin proyecto espejado todavia: se reintenta en el proximo ciclo",
+      );
+      return;
+    }
 
+    logger.debug({ projectAddress, governorProposalId }, "hidratando propuesta desde on-chain");
     const governor = governorContract(governorAddress);
     const p = await governor.proposals(governorProposalId);
 
@@ -159,10 +208,15 @@ export class SyncService {
       result: toProposalResult(p.result as bigint),
       electedArbiter,
     });
+    logger.info(
+      { projectAddress, governorProposalId, kind, status },
+      "propuesta rehidratada desde on-chain",
+    );
   }
 
   // Relee y persiste el estado de una oferta de venta desde el contrato del proyecto.
   async hydrateSaleOffer(projectAddress: string, offerId: number): Promise<void> {
+    logger.debug({ projectAddress, offerId }, "hidratando oferta de venta desde on-chain");
     const project = projectContract(projectAddress);
     const o = await project.saleOffers(offerId);
     await this.offers.upsertOfferRow({
@@ -173,6 +227,10 @@ export class SyncService {
       proposalId: Number(o.proposalId) > 0 ? Number(o.proposalId) : null,
       status: toOfferStatus(o.status as bigint),
     });
+    logger.info(
+      { projectAddress, offerId, status: toOfferStatus(o.status as bigint) },
+      "oferta de venta rehidratada desde on-chain",
+    );
   }
 }
 

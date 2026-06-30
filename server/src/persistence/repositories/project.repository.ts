@@ -14,6 +14,8 @@ import { prisma } from "./prisma";
 export interface ProjectRowInput {
   address: string;
   tokenAddress: string;
+  tokenName?: string | null;
+  tokenSymbol?: string | null;
   governorAddress: string;
   developerWallet: string;
   projectType: ProjectTypeValue;
@@ -40,7 +42,14 @@ export interface ListFilter {
   pageSize: number;
 }
 
-type ProjectRow = Prisma.ProjectGetPayload<{ include: { milestones: true } }>;
+type ProjectRow = Prisma.ProjectGetPayload<{
+  include: { milestones: true; developer: { select: { razonSocial: true } } };
+}>;
+
+const projectInclude = {
+  milestones: true,
+  developer: { select: { razonSocial: true } },
+} satisfies Prisma.ProjectInclude;
 
 export class ProjectRepository {
   constructor(private readonly db: PrismaClient = prisma) { }
@@ -53,6 +62,7 @@ export class ProjectRepository {
           new Milestone({
             milestoneIndex: m.milestoneIndex,
             budget: BigInt(m.budget.toString()),
+            durationSeconds: m.durationSeconds,
             deadline: m.deadline,
             status: m.status,
             retryCount: m.retryCount,
@@ -67,6 +77,9 @@ export class ProjectRepository {
       {
         address: row.address,
         tokenAddress: row.tokenAddress,
+        tokenName: row.tokenName,
+        tokenSymbol: row.tokenSymbol,
+        developerRazonSocial: row.developer?.razonSocial ?? null,
         governorAddress: row.governorAddress,
         developerWallet: row.developerWallet,
         projectType: row.projectType,
@@ -90,7 +103,7 @@ export class ProjectRepository {
   async findByAddress(address: string): Promise<Project | null> {
     const row = await this.db.project.findUnique({
       where: { address: address.toLowerCase() },
-      include: { milestones: true },
+      include: projectInclude,
     });
     return row ? this.toModel(row) : null;
   }
@@ -103,7 +116,7 @@ export class ProjectRepository {
     const [rows, total] = await Promise.all([
       this.db.project.findMany({
         where,
-        include: { milestones: true },
+        include: projectInclude,
         orderBy: { createdAtBlock: "desc" },
         skip: (filter.page - 1) * filter.pageSize,
         take: filter.pageSize,
@@ -129,6 +142,8 @@ export class ProjectRepository {
   async upsertProjectRow(input: ProjectRowInput): Promise<void> {
     const data = {
       tokenAddress: input.tokenAddress.toLowerCase(),
+      tokenName: input.tokenName ?? null,
+      tokenSymbol: input.tokenSymbol ?? null,
       governorAddress: input.governorAddress.toLowerCase(),
       developerWallet: input.developerWallet.toLowerCase(),
       projectType: input.projectType,
