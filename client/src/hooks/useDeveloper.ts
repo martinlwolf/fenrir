@@ -1,5 +1,17 @@
 import { useQuery } from "@tanstack/react-query";
-import { getDeveloper, getReputation } from "@/services/developers.service";
+import {
+  getDeveloper,
+  getReputation,
+  listDevelopers,
+  type DeveloperListFilters,
+} from "@/services/developers.service";
+
+export function useDevelopersList(filters: DeveloperListFilters) {
+  return useQuery({
+    queryKey: ["developers", filters],
+    queryFn: () => listDevelopers(filters),
+  });
+}
 
 export function useDeveloper(wallet: string | undefined) {
   return useQuery({

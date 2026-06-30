@@ -33,6 +33,10 @@ contract FenrirProject is ReentrancyGuard, IFenrirProjectCallback {
         bytes32 reportHash;
         string reportUrl;
         uint256 proposalId;
+        // Promesa inmutable de lo que el desarrollador se compromete a entregar en este hito,
+        // fijada al crear el proyecto. Es el patron contra el que los inversores votan si el
+        // hito se cumplio segun lo pactado (el reportHash/reportUrl es la prueba de cumplimiento).
+        string description;
     }
 
     struct SaleOffer {
@@ -116,10 +120,12 @@ contract FenrirProject is ReentrancyGuard, IFenrirProjectCallback {
         uint256 fundingDeadline_,
         uint256[] memory milestoneBudgets_,
         uint256[] memory milestoneDurations_,
+        string[] memory milestoneDescriptions_,
         uint256 estimatedSalePrice_
     ) {
         require(
             milestoneBudgets_.length == milestoneDurations_.length
+            && milestoneBudgets_.length == milestoneDescriptions_.length
             && milestoneBudgets_.length > 0, "FenrirProject: milestones mismatch"
         );
 
@@ -136,7 +142,8 @@ contract FenrirProject is ReentrancyGuard, IFenrirProjectCallback {
                 status: MilestoneStatus.Pending,
                 reportHash: bytes32(0),
                 reportUrl: "",
-                proposalId: 0
+                proposalId: 0,
+                description: milestoneDescriptions_[i]
             }));
         }
         require(sum == ff_, "FenrirProject: FF must equal sum of milestone budgets");

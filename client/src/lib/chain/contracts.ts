@@ -105,6 +105,9 @@ export interface CreateProjectInput {
   fundingDeadline: number; // unix seconds
   milestoneBudgets: bigint[];
   milestoneDurations: number[]; // seconds
+  // Promesa de lo que el developer entregara en cada hito (1:1 con budgets/durations). Queda
+  // inmutable on-chain como patron contra el que el DAO vota el cumplimiento.
+  milestoneDescriptions: string[];
   estimatedSalePrice: bigint;
 }
 
@@ -120,6 +123,7 @@ export async function createProject(input: CreateProjectInput): Promise<Transact
     input.fundingDeadline,
     input.milestoneBudgets,
     input.milestoneDurations,
+    input.milestoneDescriptions,
     input.estimatedSalePrice,
   );
 }

@@ -5,6 +5,7 @@ import { VoteNotifications } from "@/components/domain/VoteNotifications";
 import { CatalogPage } from "@/routes/CatalogPage";
 import { ProjectDetailPage } from "@/routes/ProjectDetailPage";
 import { MyPortfolioPage } from "@/routes/MyPortfolioPage";
+import { DevelopersPage } from "@/routes/DevelopersPage";
 import { DeveloperProfilePage } from "@/routes/DeveloperProfilePage";
 import { MarketplacePage } from "@/routes/MarketplacePage";
 import { CreateProjectPage } from "@/routes/CreateProjectPage";
@@ -35,9 +36,10 @@ export function App() {
           <Route path="/" element={<CatalogPage />} />
           <Route path="/projects/:address" element={<ProjectDetailPage />} />
           <Route path="/portfolio" element={<MyPortfolioPage />} />
+          <Route path="/developers" element={<DevelopersPage />} />
+          <Route path="/developers/register" element={<RegisterDeveloperPage />} />
           <Route path="/developers/:wallet" element={<DeveloperProfilePage />} />
           <Route path="/marketplace" element={<MarketplacePage />} />
-          <Route path="/developers/register" element={<RegisterDeveloperPage />} />
           <Route path="/create" element={<CreateProjectPage />} />
         </Route>
       </Routes>

@@ -6,6 +6,7 @@ import type { MilestoneResponse } from "@shared/schemas/project.schema";
 
 export interface MilestoneProps {
   milestoneIndex: number;
+  description: string;
   budget: bigint;
   durationSeconds: bigint | null;
   deadline: Date | null;
@@ -28,6 +29,7 @@ export class Milestone {
     const p = this.props;
     return {
       milestoneIndex: p.milestoneIndex,
+      description: p.description ?? "",
       budget: p.budget.toString(),
       // `!= null` (no `!== null`) para cubrir tambien `undefined` (p.ej. Prisma Client
       // desactualizado o filas sin la columna): el schema admite null.

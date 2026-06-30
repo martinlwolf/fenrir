@@ -50,7 +50,7 @@ function MilestoneItem({
     <div className="flex flex-col gap-2 border-b py-3 last:border-0 sm:flex-row sm:items-center sm:justify-between">
       <div className="space-y-1">
         <div className="flex items-center gap-2">
-          <span className="font-medium">Hito {milestone.milestoneIndex}</span>
+          <span className="font-medium">Hito {milestone.milestoneIndex + 1}</span>
           <MilestoneStatusBadge
             status={milestone.status}
             expired={votingExpired}
@@ -63,6 +63,12 @@ function MilestoneItem({
             </span>
           )}
         </div>
+        {milestone.description && (
+          <p className="whitespace-pre-wrap break-words text-sm">
+            <span className="text-muted-foreground">Promesa: </span>
+            {milestone.description}
+          </p>
+        )}
         <div className="text-sm text-muted-foreground">
           Tranche: {formatWei(milestone.budget)} ·{" "}
           {isRetryWindow

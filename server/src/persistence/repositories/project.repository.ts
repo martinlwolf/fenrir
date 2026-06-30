@@ -61,6 +61,7 @@ export class ProjectRepository {
         (m) =>
           new Milestone({
             milestoneIndex: m.milestoneIndex,
+            description: m.description ?? "",
             budget: BigInt(m.budget.toString()),
             durationSeconds: m.durationSeconds,
             deadline: m.deadline,

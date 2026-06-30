@@ -17,6 +17,11 @@ export type ProjectListQuery = z.infer<typeof projectListQuerySchema>;
 
 export const milestoneResponseSchema = z.object({
   milestoneIndex: z.number().int(),
+  // Promesa inmutable de lo que el developer se compromete a entregar en este hito, fijada al
+  // crear el proyecto. Es el patron contra el que el DAO vota si el hito se cumplio segun lo
+  // pactado (a diferencia de reportHash/reportUrl, que son la prueba de cumplimiento que sube
+  // el developer al declararlo). Se lee on-chain de Milestone.description.
+  description: z.string(),
   budget: weiStringSchema,
   // Plazo del hito en segundos (string, como los montos). Se conoce desde la creacion;
   // `deadline` (fecha absoluta) recien aparece cuando el hito se activa.
