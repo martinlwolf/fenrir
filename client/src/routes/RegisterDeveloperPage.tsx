@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { CheckCircle2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,35 +9,28 @@ import { Label } from "@/components/ui/label";
 import { TxFeedback } from "@/components/domain/TxFeedback";
 import { useWallet } from "@/providers/WalletProvider";
 import { useWrite } from "@/hooks/useWrite";
-import { useDeveloper } from "@/hooks/useDeveloper";
+import { useOnchainDeveloper } from "@/hooks/useOnchainDeveloper";
 import { registerDeveloper } from "@/lib/chain/contracts";
 import { shortAddress } from "@/lib/format";
 
-// Alta de developer (on-chain) firmando contra el FenrirFactory (FR-012). Pantalla propia:
-// el alta es prerequisito de crear un proyecto, asi que se valida ANTES y por separado para
-// no perder el form del proyecto si la wallet todavia no estaba registrada.
+// Alta de developer (on-chain) firmando contra el FenrirFactory (FR-012). El registro se LEE
+// directo del factory on-chain (no del backend espejo), porque eso es lo que valida
+// createProject: si redeployás el factory, el backend puede seguir diciendo "registrado" pero
+// el factory nuevo no te conoce. Pantalla propia: el alta es prerequisito de crear un proyecto.
 export function RegisterDeveloperPage() {
   const { address, isOnSepolia, connect, switchNetwork, hasWallet } = useWallet();
 
-  const {
-    data: developer,
-    isLoading: devLoading,
-    refetch: refetchDeveloper,
-  } = useDeveloper(address ?? undefined);
-  const isRegistered = !!developer;
-
-  const register = useWrite(address ? [["developer", address]] : []);
+  const register = useWrite(address ? [["onchain-developer", address]] : []);
   const [razonSocial, setRazonSocial] = useState("");
   const [cuit, setCuit] = useState("");
 
-  // Tras confirmar el alta on-chain, el backend tarda en espejar el evento. Sondeamos la
-  // identidad hasta verla registrada para que la tarjeta pase a "Registrado" sin que el
-  // usuario recargue (y sin perder navegacion).
-  useEffect(() => {
-    if (register.phase !== "confirmed" || isRegistered) return;
-    const interval = setInterval(() => void refetchDeveloper(), 2500);
-    return () => clearInterval(interval);
-  }, [register.phase, isRegistered, refetchDeveloper]);
+  // Tras confirmar el alta on-chain sondeamos el factory hasta verla registrada, sin que el
+  // usuario recargue (poll directo a la cadena, no al backend).
+  const { data: developer, isLoading: devLoading } = useOnchainDeveloper(
+    address,
+    register.phase === "confirmed",
+  );
+  const isRegistered = !!developer?.registered;
 
   if (!hasWallet) {
     return <p className="text-muted-foreground">Necesitás una wallet para registrarte como developer.</p>;
@@ -64,7 +57,7 @@ export function RegisterDeveloperPage() {
         <CardContent className="space-y-3">
           {devLoading ? (
             <p className="text-sm text-muted-foreground">Verificando tu registro…</p>
-          ) : developer ? (
+          ) : isRegistered ? (
             <>
               <div className="flex items-start justify-between gap-3 rounded-md border bg-muted/40 p-3">
                 <div className="space-y-0.5">
@@ -73,7 +66,7 @@ export function RegisterDeveloperPage() {
                     <span className="font-medium">{developer.razonSocial}</span>
                   </div>
                   <p className="text-sm text-muted-foreground">CUIT {developer.cuit}</p>
-                  <p className="text-xs text-muted-foreground">{shortAddress(developer.wallet)}</p>
+                  <p className="text-xs text-muted-foreground">{shortAddress(address)}</p>
                 </div>
                 <Badge variant="success">Registrado</Badge>
               </div>
@@ -84,8 +77,8 @@ export function RegisterDeveloperPage() {
           ) : (
             <>
               <p className="text-sm text-muted-foreground">
-                Esta wallet todavía no está registrada como developer. Registrate una vez para
-                poder crear proyectos.
+                Esta wallet todavía no está registrada como developer en el factory actual.
+                Registrate una vez para poder crear proyectos.
               </p>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
@@ -103,9 +96,9 @@ export function RegisterDeveloperPage() {
               >
                 Registrar developer
               </Button>
-              {register.phase === "confirmed" && (
+              {register.phase === "confirmed" && !isRegistered && (
                 <p className="text-sm text-muted-foreground">
-                  Registro confirmado on-chain. Esperando a que el backend lo espeje…
+                  Registro confirmado on-chain. Actualizando…
                 </p>
               )}
               <TxFeedback phase={register.phase} error={register.error} />

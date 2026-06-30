@@ -24,6 +24,7 @@ export const FENRIR_FACTORY_ABI: string[] = [
 export const FENRIR_PROJECT_ABI: string[] = [
   // events
   "event Invested(address indexed investor, uint256 amount)",
+  "event FmpaReached(uint256 totalRaised)",
   "event ArbiterElectionStarted(uint256 proposalId)",
   "event FundingRoundClosed(uint256 totalRaised)",
   "event ArbiterElected(address indexed newArbiter)",
@@ -49,6 +50,8 @@ export const FENRIR_PROJECT_ABI: string[] = [
   "function status() view returns (uint8)",
   "function fmpa() view returns (uint256)",
   "function ff() view returns (uint256)",
+  "function fmpaReached() view returns (bool)",
+  "function arbiterElectionOpened() view returns (bool)",
   "function fundingDeadline() view returns (uint256)",
   "function estimatedSalePrice() view returns (uint256)",
   "function totalRaised() view returns (uint256)",
@@ -74,6 +77,7 @@ export const FENRIR_PROJECT_ABI: string[] = [
   "function claimDistribution()",
   "function claimCommission()",
   // mantenimiento / casos borde
+  "function openArbiterElection()",
   "function cancelExpiredFunding()",
   "function cancelStalledMilestone()",
   "function pokeFundingGates()",

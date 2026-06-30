@@ -58,6 +58,7 @@ contract FenrirProject is ReentrancyGuard, IFenrirProjectCallback {
     bool public fmpaReached;
     bool public roundClosed; // se llego al ff?
     bool public obraStarted;
+    bool public arbiterElectionOpened; // la eleccion de arbitro ya fue creada (post-FMPA)
 
     uint256 public totalRaised;               // cuánto ETH entró en total
     uint256 public totalReleasedToDeveloper;  // cuánto ya se le pagó al developer
@@ -83,6 +84,7 @@ contract FenrirProject is ReentrancyGuard, IFenrirProjectCallback {
     uint256 public salePrice;
 
     event Invested(address indexed investor, uint256 amount);
+    event FmpaReached(uint256 totalRaised);
     event ArbiterElectionStarted(uint256 proposalId);
     event FundingRoundClosed(uint256 totalRaised); // cuando se llega al FMPA?
     event ArbiterElected(address indexed newArbiter);
@@ -177,7 +179,11 @@ contract FenrirProject is ReentrancyGuard, IFenrirProjectCallback {
         if (!fmpaReached && totalRaised >= fmpa) {
             fmpaReached = true;
             status = ProjectStatus.Building;
-            emit ArbiterElectionStarted(governor.proposeArbiterElection());
+            // NO se crea aca la eleccion de arbitro: el snapshot de la propuesta es block.number-1,
+            // asi que el inversor que cruza el FMPA (minteado en ESTE bloque) tendria 0 poder de
+            // voto. La eleccion se abre con openArbiterElection() en un bloque posterior, cuando
+            // el snapshot ya incluye a todos los que fondearon hasta el FMPA. Ver decisiones-pendientes.md.
+            emit FmpaReached(totalRaised);
         }
 
         if (!roundClosed && totalRaised >= ff) {
@@ -201,6 +207,19 @@ contract FenrirProject is ReentrancyGuard, IFenrirProjectCallback {
     // ---------------------------------------------------------------------
     // Hito 0 -- arranque de obra
     // ---------------------------------------------------------------------
+
+    /// Abre la eleccion de arbitro una vez alcanzado el FMPA. DEBE llamarse en un bloque
+    /// POSTERIOR al de la inversion que cruzo el FMPA: el snapshot de la propuesta es
+    /// block.number-1, asi que recien en un bloque siguiente el snapshot incluye el FDT de
+    /// TODOS los que fondearon hasta el FMPA (incluido el inversor que lo disparo). Cualquiera
+    /// puede llamarla (no requiere rol). Idempotente: una sola eleccion inicial.
+    function openArbiterElection() external {
+        require(fmpaReached, "FenrirProject: FMPA not reached");
+        require(status == ProjectStatus.Building, "FenrirProject: not building");
+        require(!arbiterElectionOpened, "FenrirProject: election already opened");
+        arbiterElectionOpened = true;
+        emit ArbiterElectionStarted(governor.proposeArbiterElection());
+    }
 
     function onArbiterElected(address newArbiter) external override onlyGovernor {
         emit ArbiterElected(newArbiter);
