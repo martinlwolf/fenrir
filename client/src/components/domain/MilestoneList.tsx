@@ -6,7 +6,7 @@ import { ReportVerificationBadge } from "./ReportVerificationBadge";
 import { DeclareMilestoneDialog } from "./DeclareMilestoneDialog";
 import { useWallet } from "@/providers/WalletProvider";
 import { useProposals } from "@/hooks/useProposals";
-import { formatWei, formatDate, isPast } from "@/lib/format";
+import { formatWei, formatDate, formatDuration, isPast } from "@/lib/format";
 import type { MilestoneResponse } from "@shared/schemas/project.schema";
 
 function reportIdFromUrl(url: string | null): number | null {
@@ -48,7 +48,10 @@ function MilestoneItem({
           )}
         </div>
         <div className="text-sm text-muted-foreground">
-          Tranche: {formatWei(milestone.budget)} · Vence: {formatDate(milestone.deadline)}
+          Tranche: {formatWei(milestone.budget)} ·{" "}
+          {milestone.deadline
+            ? `Vence: ${formatDate(milestone.deadline)}`
+            : `Plazo: ${formatDuration(milestone.durationSeconds)} (desde su activación)`}
           {milestone.trancheReleased && " · liberada"}
         </div>
         {reportId != null && <ReportVerificationBadge reportId={reportId} />}

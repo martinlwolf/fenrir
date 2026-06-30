@@ -40,6 +40,22 @@ export class InvestmentRepository {
     return rows.map((r) => r.projectAddress);
   }
 
+  // Cantidad de inversores DISTINTOS por proyecto, para un conjunto de direcciones. Una sola
+  // query: `distinct` colapsa los pares (proyecto, wallet) repetidos y se cuenta por proyecto.
+  async countDistinctInvestorsByProjects(addresses: string[]): Promise<Map<string, number>> {
+    if (addresses.length === 0) return new Map();
+    const rows = await this.db.investment.findMany({
+      where: { projectAddress: { in: addresses.map((a) => a.toLowerCase()) } },
+      distinct: ["projectAddress", "investorWallet"],
+      select: { projectAddress: true },
+    });
+    const counts = new Map<string, number>();
+    for (const r of rows) {
+      counts.set(r.projectAddress, (counts.get(r.projectAddress) ?? 0) + 1);
+    }
+    return counts;
+  }
+
   // Wallets distintas que invirtieron en un proyecto.
   async listInvestorsByProject(projectAddress: string): Promise<string[]> {
     const rows = await this.db.investment.findMany({

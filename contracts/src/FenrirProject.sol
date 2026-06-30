@@ -73,7 +73,9 @@ contract FenrirProject is ReentrancyGuard, IFenrirProjectCallback {
     Milestone[] public milestones;
     uint256 public currentMilestoneIndex;
     uint256[] private _cumulativeBudget;
-    uint256[] private _milestoneDurations;
+    // Publico: el plazo (en segundos) que tendra cada hito una vez activado. Se fija al crear
+    // el proyecto; la fecha absoluta (Milestone.deadline) recien se calcula al activarse el hito.
+    uint256[] public milestoneDurations;
 
     mapping(uint256 => SaleOffer) public saleOffers;
     uint256 public nextOfferId = 1;
@@ -123,7 +125,7 @@ contract FenrirProject is ReentrancyGuard, IFenrirProjectCallback {
         for (uint256 i = 0; i < milestoneBudgets_.length; i++) {
             sum += milestoneBudgets_[i];
             _cumulativeBudget.push(sum);
-            _milestoneDurations.push(milestoneDurations_[i]);
+            milestoneDurations.push(milestoneDurations_[i]);
             milestones.push(Milestone({
                 budget: milestoneBudgets_[i],
                 deadline: 0,
@@ -210,7 +212,7 @@ contract FenrirProject is ReentrancyGuard, IFenrirProjectCallback {
     }
 
     function _activateMilestone(uint256 i) internal {
-        milestones[i].deadline = block.timestamp + _milestoneDurations[i];
+        milestones[i].deadline = block.timestamp + milestoneDurations[i];
     }
 
     // ---------------------------------------------------------------------

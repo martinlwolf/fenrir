@@ -11,6 +11,14 @@ import type { Milestone } from "./Milestone";
 export interface ProjectProps {
   address: string;
   tokenAddress: string;
+  tokenName: string | null;
+  tokenSymbol: string | null;
+  // Razon social del developer, traida por join al espejar. Identifica al responsable del
+  // proyecto en la UI sin un fetch extra.
+  developerRazonSocial: string | null;
+  // Inversores distintos del proyecto. Lo compone el ProjectService (no es estado del modelo);
+  // 0 por defecto cuando no se calculo.
+  investorCount?: number;
   governorAddress: string;
   developerWallet: string;
   projectType: ProjectTypeValue;
@@ -47,6 +55,10 @@ export class Project {
     return {
       address: p.address,
       tokenAddress: p.tokenAddress,
+      tokenName: p.tokenName,
+      tokenSymbol: p.tokenSymbol,
+      developerRazonSocial: p.developerRazonSocial,
+      investorCount: p.investorCount ?? 0,
       governorAddress: p.governorAddress,
       developerWallet: p.developerWallet,
       projectType: p.projectType,

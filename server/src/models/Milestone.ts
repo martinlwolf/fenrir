@@ -7,6 +7,7 @@ import type { MilestoneResponse } from "@shared/schemas/project.schema";
 export interface MilestoneProps {
   milestoneIndex: number;
   budget: bigint;
+  durationSeconds: bigint | null;
   deadline: Date | null;
   status: MilestoneStatusValue;
   retryCount: number;
@@ -28,6 +29,7 @@ export class Milestone {
     return {
       milestoneIndex: p.milestoneIndex,
       budget: p.budget.toString(),
+      durationSeconds: p.durationSeconds !== null ? p.durationSeconds.toString() : null,
       deadline: p.deadline ? p.deadline.toISOString() : null,
       status: p.status,
       retryCount: p.retryCount,

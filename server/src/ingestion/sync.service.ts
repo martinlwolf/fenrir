@@ -15,7 +15,7 @@ import {
   toProposalStatus,
   toVotingMode,
 } from "../models/onchain/enums";
-import { governorContract, projectContract } from "../models/onchain/provider";
+import { governorContract, projectContract, tokenContract } from "../models/onchain/provider";
 import { MilestoneRepository, milestoneRepository } from "../persistence/repositories/milestone.repository";
 import { ProjectRepository, projectRepository } from "../persistence/repositories/project.repository";
 import { ProposalRepository, proposalRepository } from "../persistence/repositories/proposal.repository";
@@ -80,15 +80,22 @@ export class SyncService {
 
     const developerAddr = (await project.developer()) as string;
     const governor = governorContract(governorAddr);
-    const [votingModeRaw, arbiter] = await Promise.all([
+    const token = tokenContract(tokenAddr);
+    // name()/symbol() son inmutables (se fijan al crear el token), pero releerlos en cada
+    // hidratacion mantiene el espejo siempre poblado sin un camino especial de creacion.
+    const [votingModeRaw, arbiter, tokenName, tokenSymbol] = await Promise.all([
       governor.votingMode() as Promise<bigint>,
       governor.arbiter() as Promise<string>,
+      token.name() as Promise<string>,
+      token.symbol() as Promise<string>,
     ]);
 
     const status = toProjectStatus(statusRaw);
     await this.projects.upsertProjectRow({
       address,
       tokenAddress: tokenAddr,
+      tokenName,
+      tokenSymbol,
       governorAddress: governorAddr,
       developerWallet: developerAddr,
       projectType: toProjectType(projectTypeRaw),
@@ -111,15 +118,17 @@ export class SyncService {
     // evita el N+1 secuencial). Los upserts se hacen despues, en orden, para no
     // presionar el pool de conexiones.
     const count = Number(milestonesCountRaw);
-    const rawMilestones = await Promise.all(
-      Array.from({ length: count }, (_, i) => project.milestones(i)),
-    );
+    const [rawMilestones, rawDurations] = await Promise.all([
+      Promise.all(Array.from({ length: count }, (_, i) => project.milestones(i))),
+      Promise.all(Array.from({ length: count }, (_, i) => project.milestoneDurations(i))),
+    ]);
     for (let i = 0; i < count; i++) {
       const m = rawMilestones[i];
       await this.milestones.upsertMilestoneRow({
         projectAddress: address,
         milestoneIndex: i,
         budget: m.budget as bigint,
+        durationSeconds: rawDurations[i] as bigint,
         deadline: deadlineToDate(m.deadline as bigint),
         status: toMilestoneStatus(m.status as bigint),
         retryCount: Number(m.retryCount),

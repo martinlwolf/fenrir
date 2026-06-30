@@ -63,8 +63,14 @@ export function VotePanel({
           <CardTitle className="text-base">
             {KIND_LABEL[proposal.kind]} #{proposal.refId}
           </CardTitle>
-          <Badge variant={active ? "warning" : "secondary"}>
-            {active ? "En votación" : proposal.status === "AwaitingArbiter" ? "Esperando árbitro" : "Resuelta"}
+          <Badge variant={active ? (expired ? "destructive" : "warning") : "secondary"}>
+            {active
+              ? expired
+                ? "Votación vencida"
+                : "En votación"
+              : proposal.status === "AwaitingArbiter"
+                ? "Esperando árbitro"
+                : "Resuelta"}
           </Badge>
         </div>
       </CardHeader>
@@ -73,7 +79,9 @@ export function VotePanel({
         <Row label="En contra" value={formatWei(proposal.votesAgainst)} />
         <Row label="Quórum" value={`${proposal.quorumBps / 100}%${proposal.quorumReached ? " ✓" : ""}`} />
         <Row label="Umbral" value={`${proposal.approvalThresholdBps / 100}%`} />
-        {active && <Row label="Tiempo restante" value={timeRemaining(proposal.deadline)} />}
+        {active && !expired && (
+          <Row label="Tiempo restante" value={timeRemaining(proposal.deadline)} />
+        )}
         {proposal.result !== "None" && (
           <Row label="Resultado" value={proposal.result === "Approved" ? "Aprobada" : "Rechazada"} />
         )}

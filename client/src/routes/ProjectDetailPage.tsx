@@ -5,6 +5,7 @@ import { FundingSummary } from "@/components/domain/FundingSummary";
 import { MilestoneList } from "@/components/domain/MilestoneList";
 import { InvestDialog } from "@/components/domain/InvestDialog";
 import { GovernanceSection } from "@/components/domain/GovernanceSection";
+import { DeveloperInfoCard } from "@/components/domain/DeveloperInfoCard";
 import { SaleSection } from "@/components/domain/SaleSection";
 import { ClaimCommissionPanel } from "@/components/domain/ClaimCommissionPanel";
 import { MaintenancePanel } from "@/components/domain/MaintenancePanel";
@@ -39,11 +40,18 @@ export function ProjectDetailPage() {
       </Button>
 
       <div className="flex flex-wrap items-center gap-3">
-        <h1 className="text-2xl font-semibold">{shortAddress(project.address)}</h1>
+        <h1 className="text-2xl font-semibold">
+          {project.tokenName ?? shortAddress(project.address)}
+        </h1>
+        {project.tokenSymbol && (
+          <Badge variant="secondary" className="font-mono">
+            {project.tokenSymbol}
+          </Badge>
+        )}
         <Badge variant="outline">{TYPE_LABEL[project.projectType]}</Badge>
         <ProjectStatusBadge status={project.status} />
         <span className="text-sm text-muted-foreground">
-          FDT emitido: {formatWei(project.totalRaised)}
+          {project.investorCount} inversores · FDT emitido: {formatWei(project.totalRaised)}
         </span>
         {project.status === "Funding" && (
           <div className="ml-auto">
@@ -52,15 +60,7 @@ export function ProjectDetailPage() {
         )}
       </div>
 
-      <p className="text-sm text-muted-foreground">
-        Desarrollador:{" "}
-        <Link
-          to={`/developers/${project.developerWallet}`}
-          className="text-primary underline"
-        >
-          {shortAddress(project.developerWallet)}
-        </Link>
-      </p>
+      <p className="font-mono text-xs text-muted-foreground">{project.address}</p>
 
       <Tabs defaultValue="summary">
         <TabsList>
@@ -74,6 +74,10 @@ export function ProjectDetailPage() {
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
             <div className="space-y-6 lg:col-span-1">
               <FundingSummary project={project} />
+              <DeveloperInfoCard
+                wallet={project.developerWallet}
+                razonSocial={project.developerRazonSocial}
+              />
               <ClaimCommissionPanel project={project} />
               <MaintenancePanel project={project} />
             </div>

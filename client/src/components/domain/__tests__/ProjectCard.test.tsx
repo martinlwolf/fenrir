@@ -7,6 +7,10 @@ import type { ProjectResponse } from "@shared/schemas/project.schema";
 const project: ProjectResponse = {
   address: "0x" + "a1".repeat(20),
   tokenAddress: "0x" + "b1".repeat(20),
+  tokenName: "Edificio Roca",
+  tokenSymbol: "ROCA",
+  developerRazonSocial: "Constructora del Norte S.A.",
+  investorCount: 12,
   governorAddress: "0x" + "c1".repeat(20),
   developerWallet: "0x" + "d1".repeat(20),
   projectType: "Investment",

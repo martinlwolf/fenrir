@@ -60,6 +60,7 @@ export const FENRIR_PROJECT_ABI: string[] = [
   "function refundPool() view returns (uint256)",
   "function milestonesCount() view returns (uint256)",
   "function milestones(uint256) view returns (uint256 budget, uint256 deadline, uint8 retryCount, bool trancheReleased, uint8 status, bytes32 reportHash, string reportUrl, uint256 proposalId)",
+  "function milestoneDurations(uint256) view returns (uint256)",
   "function developer() view returns (address)",
   "function token() view returns (address)",
   "function governor() view returns (address)",
