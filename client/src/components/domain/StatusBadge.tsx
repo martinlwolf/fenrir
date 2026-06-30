@@ -43,7 +43,17 @@ const MILESTONE_VARIANT: Record<MilestoneStatusValue, Variant> = {
   Rejected: "destructive",
 };
 
-export function MilestoneStatusBadge({ status }: { status: MilestoneStatusValue }) {
+export function MilestoneStatusBadge({
+  status,
+  expired = false,
+}: {
+  status: MilestoneStatusValue;
+  /** La votacion ya vencio pero todavia no se resolvio on-chain (sigue en estado Voting). */
+  expired?: boolean;
+}) {
+  if (status === "Voting" && expired) {
+    return <Badge variant="destructive">Votación vencida</Badge>;
+  }
   return <Badge variant={MILESTONE_VARIANT[status]}>{MILESTONE_LABEL[status]}</Badge>;
 }
 

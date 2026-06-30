@@ -4,6 +4,7 @@ import { buildApp } from "./app";
 import { env } from "./config/env";
 import { logger } from "./config/logger";
 import { onChainListener } from "./ingestion/listener";
+import { proposalResolver } from "./ingestion/proposalResolver";
 import { prisma } from "./persistence/repositories/prisma";
 
 async function main(): Promise<void> {
@@ -15,10 +16,12 @@ async function main(): Promise<void> {
   });
 
   onChainListener.start();
+  proposalResolver.start();
 
   const shutdown = async (signal: string): Promise<void> => {
     logger.info(`recibido ${signal}, cerrando...`);
     onChainListener.stop();
+    proposalResolver.stop();
     server.close();
     await prisma.$disconnect();
     process.exit(0);

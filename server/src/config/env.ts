@@ -24,6 +24,15 @@ const envSchema = z.object({
 
   AUTH_NONCE_TTL_MINUTES: z.coerce.number().int().positive().default(10),
 
+  // Auto-resolucion de propuestas vencidas. Si se define una private key, el backend
+  // envia resolve() on-chain por las propuestas Active cuyo plazo ya vencio (necesita
+  // ETH de Sepolia para gas). Si se deja vacia, el auto-resolver queda desactivado y la
+  // resolucion sigue siendo manual desde la UI ("Finalizar votacion").
+  RESOLVER_PRIVATE_KEY: z
+    .string()
+    .regex(/^0x[a-fA-F0-9]{64}$/, "RESOLVER_PRIVATE_KEY invalida")
+    .optional(),
+
   // --- Logging (pino, constitution Principio V) ---
   LOG_LEVEL: z
     .enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])

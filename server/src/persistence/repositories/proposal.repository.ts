@@ -132,6 +132,18 @@ export class ProposalRepository {
     return row ? { id: row.id, snapshotBlock: row.snapshotBlock } : null;
   }
 
+  // Propuestas todavia Active cuyo plazo de votacion ya vencio: candidatas a que el
+  // auto-resolver les mande resolve() on-chain. `before` deja un colchon sobre el deadline.
+  async listExpiredActive(
+    before: Date,
+  ): Promise<{ projectAddress: string; governorProposalId: number }[]> {
+    return this.db.proposal.findMany({
+      where: { status: "Active", deadline: { lt: before } },
+      select: { projectAddress: true, governorProposalId: true },
+      orderBy: { deadline: "asc" },
+    });
+  }
+
   // Hay una eleccion de arbitro activa o esperando resolucion (hito 0, vacancia o
   // re-eleccion en curso).
   async hasActiveArbiterElection(projectAddress: string): Promise<boolean> {
