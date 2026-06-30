@@ -32,6 +32,11 @@ export class ReportController {
     res.json(await this.reports.getReport(id));
   };
 
+  getByMilestone = async (req: Request, res: Response): Promise<void> => {
+    const { address, index } = milestoneParamsSchema.parse(req.params);
+    res.json(await this.reports.getByProjectMilestone(address, index));
+  };
+
   verification = async (req: Request, res: Response): Promise<void> => {
     const { id } = idParamSchema.parse(req.params);
     res.json(await this.reports.getVerification(id));

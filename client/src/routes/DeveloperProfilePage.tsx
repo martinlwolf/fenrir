@@ -11,6 +11,7 @@ import { SubmitVerificationDialog } from "@/components/domain/SubmitVerification
 import { useWallet } from "@/providers/WalletProvider";
 import { useDeveloper, useReputation } from "@/hooks/useDeveloper";
 import { shortAddress } from "@/lib/format";
+import { AddressTag } from "@/components/domain/AddressTag";
 import { initials, avatarGradient } from "@/lib/avatar";
 
 export function DeveloperProfilePage() {
@@ -48,8 +49,8 @@ export function DeveloperProfilePage() {
                     <p className="truncate font-serif text-xl font-semibold text-[var(--fen-ink)]">
                       {developer.data.razonSocial}
                     </p>
-                    <p className="font-mono text-xs text-[var(--fen-muted)]">
-                      {shortAddress(developer.data.wallet)}
+                    <p className="text-xs text-[var(--fen-muted)]">
+                      <AddressTag address={developer.data.wallet} />
                     </p>
                   </div>
                 </div>

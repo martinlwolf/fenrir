@@ -471,6 +471,10 @@ export const mockReports: Record<string, ReportResponse> = {
     mediaUrls: ["http://localhost:4000/media/r2-foto1.jpg"],
     documentUrls: ["http://localhost:4000/docs/r2-acta.pdf"],
     reportHash: "0x" + "22".repeat(32),
+    cid: null,
+    manifestUrl: null,
+    onChainHash: "0x" + "22".repeat(32),
+    hashMatch: true,
   },
 };
 

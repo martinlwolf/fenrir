@@ -17,10 +17,15 @@ const envSchema = z.object({
   INGESTION_CONFIRMATIONS: z.coerce.number().int().min(0).default(5),
   INGESTION_BACKFILL_BATCH: z.coerce.number().int().positive().default(2000),
 
-  REPORT_STORAGE_DRIVER: z.enum(["local"]).default("local"),
+  REPORT_STORAGE_DRIVER: z.enum(["local", "ipfs"]).default("local"),
   REPORT_STORAGE_LOCAL_DIR: z.string().default("./.data/reports"),
   PUBLIC_BASE_URL: z.string().url().default("http://localhost:4000"),
   FRONTEND_URL: z.string().url().optional(),
+
+  // Solo con REPORT_STORAGE_DRIVER=ipfs. JWT de Pinata para pinear el reporte; el
+  // gateway publico desde el que se sirven los CIDs.
+  PINATA_JWT: z.string().min(1).optional(),
+  PINATA_GATEWAY: z.string().url().default("https://gateway.pinata.cloud"),
 
   AUTH_NONCE_TTL_MINUTES: z.coerce.number().int().positive().default(10),
 
