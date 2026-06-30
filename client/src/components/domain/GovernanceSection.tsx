@@ -47,6 +47,13 @@ export function GovernanceSection({ project }: { project: ProjectDetailResponse 
             projectAddress={project.address}
             governorAddress={project.governorAddress}
             proposal={proposal}
+            // En una propuesta de Hito, refId es el indice del hito: pasamos su promesa para
+            // que el inversor vea contra que verifica el cumplimiento al votar.
+            milestoneDescription={
+              proposal.kind === "Milestone"
+                ? project.milestones.find((m) => m.milestoneIndex === proposal.refId)?.description
+                : undefined
+            }
             isArbiter={isArbiter}
           />
         ),

@@ -65,7 +65,7 @@ export function DeclareMilestoneDialog({
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Declarar hito {milestoneIndex}</DialogTitle>
+          <DialogTitle>Declarar hito {milestoneIndex + 1}</DialogTitle>
           <DialogDescription>
             Subís el reporte y firmás la declaración on-chain. Requiere autenticar tu wallet.
           </DialogDescription>

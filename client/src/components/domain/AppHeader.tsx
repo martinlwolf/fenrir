@@ -22,6 +22,9 @@ export function AppHeader() {
             <Link to="/marketplace" className="hover:text-foreground">
               En venta
             </Link>
+            <Link to="/developers" className="hover:text-foreground">
+              Desarrolladores
+            </Link>
             <Link to="/portfolio" className="hover:text-foreground">
               Mi participación
             </Link>

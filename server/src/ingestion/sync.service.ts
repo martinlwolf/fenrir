@@ -145,6 +145,7 @@ export class SyncService {
       await this.milestones.upsertMilestoneRow({
         projectAddress: address,
         milestoneIndex: i,
+        description: (m.description as string) || "",
         budget: m.budget as bigint,
         durationSeconds: rawDurations[i] as bigint,
         deadline: deadlineToDate(m.deadline as bigint),

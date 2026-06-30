@@ -10,6 +10,7 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 
 
 export const developerRouter = Router();
 
+developerRouter.get("/developers", asyncHandler(developerController.list));
 developerRouter.get("/developers/:wallet", asyncHandler(developerController.profile));
 developerRouter.get("/developers/:wallet/reputation", asyncHandler(developerController.reputation));
 developerRouter.post(
@@ -19,6 +20,12 @@ developerRouter.post(
   asyncHandler(developerController.uploadVerification),
 );
 
+registerReadPath({
+  method: "get",
+  path: "/developers",
+  summary: "Directorio de developers, ordenable y filtrable por su historico (completados/fallidos)",
+  tags: ["Developers"],
+});
 registerReadPath({
   method: "get",
   path: "/developers/{wallet}",

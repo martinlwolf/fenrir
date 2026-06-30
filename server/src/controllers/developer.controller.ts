@@ -5,11 +5,16 @@ import {
   ForbiddenException,
   UnauthorizedException,
 } from "../exceptions/common.exception";
+import { developerListQuerySchema } from "@shared/schemas/developer.schema";
 import { walletParamSchema } from "../schemas/params";
 import { DeveloperService, developerService } from "../services/developer.service";
 
 export class DeveloperController {
   constructor(private readonly developers: DeveloperService = developerService) { }
+
+  list = async (req: Request, res: Response): Promise<void> => {
+    res.json(await this.developers.listDevelopers(developerListQuerySchema.parse(req.query)));
+  };
 
   profile = async (req: Request, res: Response): Promise<void> => {
     const { wallet } = walletParamSchema.parse(req.params);

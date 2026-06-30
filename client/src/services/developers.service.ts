@@ -1,10 +1,30 @@
 import { api } from "@/lib/api";
 import {
+  developerListResponseSchema,
   developerResponseSchema,
   reputationResponseSchema,
+  type DeveloperFilter,
+  type DeveloperListResponse,
   type DeveloperResponse,
+  type DeveloperSort,
   type ReputationResponse,
 } from "@shared/schemas/developer.schema";
+
+export interface DeveloperListFilters {
+  sort?: DeveloperSort;
+  order?: "asc" | "desc";
+  filter?: DeveloperFilter;
+  page?: number;
+  pageSize?: number;
+}
+
+// Directorio de developers, ordenable/filtrable por su historico (completados/fallidos).
+export async function listDevelopers(
+  filters: DeveloperListFilters = {},
+): Promise<DeveloperListResponse> {
+  const { data } = await api.get("/developers", { params: filters });
+  return developerListResponseSchema.parse(data);
+}
 
 export async function getDeveloper(wallet: string): Promise<DeveloperResponse> {
   const { data } = await api.get(`/developers/${wallet}`);

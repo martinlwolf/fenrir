@@ -35,6 +35,8 @@ export const mockProjects: ProjectDetailResponse[] = [
     milestones: [
       {
         milestoneIndex: 0,
+        description:
+          "Cimientos y estructura de la planta baja terminados, con certificado de habilitación municipal.",
         budget: ETH(4),
         durationSeconds: "604800",
         deadline: new Date(Date.now() - 86400000).toISOString(),
@@ -47,6 +49,7 @@ export const mockProjects: ProjectDetailResponse[] = [
       },
       {
         milestoneIndex: 1,
+        description: "Mampostería y losa de los primeros tres pisos completadas.",
         budget: ETH(10),
         durationSeconds: "604800",
         deadline: new Date(Date.now() + 86400000).toISOString(),
@@ -59,6 +62,7 @@ export const mockProjects: ProjectDetailResponse[] = [
       },
       {
         milestoneIndex: 2,
+        description: "Terminaciones, instalaciones y entrega final del edificio.",
         budget: ETH(26),
         durationSeconds: "1209600",
         deadline: null,
@@ -96,6 +100,7 @@ export const mockProjects: ProjectDetailResponse[] = [
     milestones: [
       {
         milestoneIndex: 0,
+        description: "Movimiento de suelo y solado de la plaza ejecutados.",
         budget: ETH(8),
         durationSeconds: "604800",
         deadline: null,
@@ -108,6 +113,7 @@ export const mockProjects: ProjectDetailResponse[] = [
       },
       {
         milestoneIndex: 1,
+        description: "Iluminación, mobiliario urbano y forestación instalados.",
         budget: ETH(12),
         durationSeconds: "1209600",
         deadline: new Date(Date.now() + 2 * 86400000).toISOString(),

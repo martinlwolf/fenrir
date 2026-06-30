@@ -31,11 +31,15 @@ export function VotePanel({
   projectAddress,
   governorAddress,
   proposal,
+  milestoneDescription,
   isArbiter = false,
 }: {
   projectAddress: string;
   governorAddress: string;
   proposal: ProposalResponse;
+  /** Promesa del hito en votación (solo para propuestas de tipo Hito): lo que el developer se
+   *  comprometió a entregar. Es contra esto que el inversor verifica el cumplimiento al votar. */
+  milestoneDescription?: string;
   /** La wallet conectada es el árbitro del proyecto (habilita el desempate). */
   isArbiter?: boolean;
 }) {
@@ -71,7 +75,8 @@ export function VotePanel({
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <CardTitle className="text-base">
-            {KIND_LABEL[proposal.kind]} #{proposal.refId}
+            {KIND_LABEL[proposal.kind]} #
+            {proposal.kind === "Milestone" ? proposal.refId + 1 : proposal.refId}
           </CardTitle>
           <Badge variant={active ? (expired ? "destructive" : "warning") : "secondary"}>
             {active
@@ -85,6 +90,17 @@ export function VotePanel({
         </div>
       </CardHeader>
       <CardContent className="space-y-2">
+        {proposal.kind === "Milestone" && milestoneDescription && (
+          <div className="rounded-md bg-muted/50 px-3 py-2">
+            <p className="mb-1 text-xs font-medium text-muted-foreground">Promesa a verificar</p>
+            {/* La promesa puede ser larga y multilinea: preservamos saltos (whitespace-pre-wrap),
+                cortamos palabras largas (break-words) y acotamos la altura con scroll para no
+                empujar fuera de vista los botones de voto. */}
+            <p className="max-h-48 overflow-y-auto whitespace-pre-wrap break-words text-sm">
+              {milestoneDescription}
+            </p>
+          </div>
+        )}
         <Row label="A favor" value={formatWei(proposal.votesFor)} />
         <Row label="En contra" value={formatWei(proposal.votesAgainst)} />
         <Row label="Quórum" value={`${proposal.quorumBps / 100}%${proposal.quorumReached ? " ✓" : ""}`} />
