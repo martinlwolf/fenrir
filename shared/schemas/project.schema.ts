@@ -8,10 +8,11 @@ import {
 } from "../constants/enums";
 import { addressSchema, paginationQuerySchema, weiStringSchema } from "./common.schema";
 
-// Query del catalogo: filtros opcionales por tipo y estado + paginacion.
+// Query del catalogo: filtros opcionales por tipo, estado y developer + paginacion.
 export const projectListQuerySchema = paginationQuerySchema.extend({
   type: z.enum(PROJECT_TYPE).optional(),
   status: z.enum(PROJECT_STATUS).optional(),
+  developer: addressSchema.optional(),
 });
 export type ProjectListQuery = z.infer<typeof projectListQuerySchema>;
 

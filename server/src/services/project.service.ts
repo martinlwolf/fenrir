@@ -20,6 +20,7 @@ export class ProjectService {
     const { items, total } = await this.projects.list({
       type: query.type,
       status: query.status,
+      developer: query.developer,
       page: query.page,
       pageSize: query.pageSize,
     });

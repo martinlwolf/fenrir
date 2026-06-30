@@ -38,6 +38,7 @@ export interface ProjectRowInput {
 export interface ListFilter {
   type?: ProjectTypeValue;
   status?: ProjectStatusValue;
+  developer?: string;
   page: number;
   pageSize: number;
 }
@@ -113,6 +114,7 @@ export class ProjectRepository {
     const where: Prisma.ProjectWhereInput = {};
     if (filter.type) where.projectType = filter.type;
     if (filter.status) where.status = filter.status;
+    if (filter.developer) where.developerWallet = filter.developer.toLowerCase();
 
     const [rows, total] = await Promise.all([
       this.db.project.findMany({

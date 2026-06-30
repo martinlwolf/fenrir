@@ -1,8 +1,10 @@
 import { useParams } from "react-router-dom";
 import { ExternalLink, FileText } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { LoadingState, EmptyState, ErrorState } from "@/components/domain/states";
+import { LoadingState, EmptyState, ErrorState, CardsSkeleton } from "@/components/domain/states";
 import { PageHeader } from "@/components/domain/PageHeader";
+import { ProjectCard } from "@/components/domain/ProjectCard";
+import { useProjects } from "@/hooks/useProjects";
 import {
   CertificateMedallion,
   ReputationCounts,
@@ -19,6 +21,7 @@ export function DeveloperProfilePage() {
   const { address } = useWallet();
   const developer = useDeveloper(wallet);
   const reputation = useReputation(wallet);
+  const projects = useProjects({ developer: wallet });
   const isOwner = !!address && address === wallet?.toLowerCase();
   const name = developer.data?.razonSocial ?? "Desarrollador";
 
@@ -122,6 +125,33 @@ export function DeveloperProfilePage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Proyectos del developer */}
+      <section className="space-y-4">
+        <h2 className="font-serif text-lg font-semibold text-[var(--fen-ink)]">Proyectos</h2>
+        {projects.isLoading ? (
+          <CardsSkeleton />
+        ) : projects.isError ? (
+          <ErrorState onRetry={() => void projects.refetch()} />
+        ) : !projects.data || projects.data.items.length === 0 ? (
+          <EmptyState
+            title="Sin proyectos"
+            description="Este desarrollador todavía no creó proyectos."
+          />
+        ) : (
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {projects.data.items.map((p, i) => (
+              <div
+                key={p.address}
+                className="animate-fade-up"
+                style={{ animationDelay: `${Math.min(i, 9) * 60}ms` }}
+              >
+                <ProjectCard project={p} />
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   );
 }
