@@ -46,7 +46,7 @@ export function ProjectDetailPage() {
   return (
     <div className="space-y-6">
       <Button variant="ghost" size="sm" asChild>
-        <Link to="/">
+        <Link to="/projects">
           <ArrowLeft /> Volver al catálogo
         </Link>
       </Button>

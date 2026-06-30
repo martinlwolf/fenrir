@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { ArrowDownUp, Building2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -11,9 +11,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/domain/PageHeader";
+import { ReputationCounts } from "@/components/domain/CertificateBadge";
 import { CardsSkeleton, EmptyState, ErrorState } from "@/components/domain/states";
 import { useDevelopersList } from "@/hooks/useDeveloper";
 import { shortAddress } from "@/lib/format";
+import { initials, avatarGradient } from "@/lib/avatar";
 import {
   type DeveloperFilter,
   type DeveloperSort,
@@ -40,56 +43,54 @@ export function DevelopersPage() {
   const { data, isLoading, isError, refetch } = useDevelopersList({ sort, order, filter });
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">Desarrolladores</h1>
-          <p className="text-sm text-muted-foreground">
-            Explorá los developers por su historial verificable de proyectos completados y fallidos.
-          </p>
+    <div className="space-y-7">
+      <PageHeader
+        eyebrow="Directorio"
+        title="Desarrolladores"
+        description="Explorá los desarrolladores por su historial verificable de obras completadas y fallidas, registrado on-chain."
+      />
+
+      <div className="animate-fade-up flex flex-wrap items-end gap-3 rounded-xl border border-[var(--fen-border)] bg-card p-3 shadow-sm">
+        <div className="space-y-1.5">
+          <Label className="text-xs text-[var(--fen-muted)]">Ordenar por</Label>
+          <Select value={sort} onValueChange={(v) => setSort(v as DeveloperSort)}>
+            <SelectTrigger className="w-52">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {(Object.keys(SORT_LABEL) as DeveloperSort[]).map((s) => (
+                <SelectItem key={s} value={s}>
+                  {SORT_LABEL[s]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
-        <div className="flex flex-wrap items-end gap-3">
-          <div className="space-y-1.5">
-            <Label className="text-xs">Ordenar por</Label>
-            <Select value={sort} onValueChange={(v) => setSort(v as DeveloperSort)}>
-              <SelectTrigger className="w-48">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {(Object.keys(SORT_LABEL) as DeveloperSort[]).map((s) => (
-                  <SelectItem key={s} value={s}>
-                    {SORT_LABEL[s]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setOrder((o) => (o === "desc" ? "asc" : "desc"))}
+          title="Invertir orden"
+        >
+          <ArrowDownUp className="size-3.5" />
+          {order === "desc" ? "Mayor a menor" : "Menor a mayor"}
+        </Button>
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setOrder((o) => (o === "desc" ? "asc" : "desc"))}
-            title="Invertir orden"
-          >
-            {order === "desc" ? "Mayor a menor" : "Menor a mayor"}
-          </Button>
-
-          <div className="space-y-1.5">
-            <Label className="text-xs">Filtrar</Label>
-            <Select value={filter} onValueChange={(v) => setFilter(v as DeveloperFilter)}>
-              <SelectTrigger className="w-40">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {(Object.keys(FILTER_LABEL) as DeveloperFilter[]).map((f) => (
-                  <SelectItem key={f} value={f}>
-                    {FILTER_LABEL[f]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs text-[var(--fen-muted)]">Filtrar</Label>
+          <Select value={filter} onValueChange={(v) => setFilter(v as DeveloperFilter)}>
+            <SelectTrigger className="w-44">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {(Object.keys(FILTER_LABEL) as DeveloperFilter[]).map((f) => (
+                <SelectItem key={f} value={f}>
+                  {FILTER_LABEL[f]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
@@ -106,22 +107,35 @@ export function DevelopersPage() {
           description="Probá quitar los filtros o volvé más tarde."
         />
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {data.items.map((d) => (
-            <Link key={d.wallet} to={`/developers/${d.wallet}`}>
-              <Card className="h-full transition-colors hover:bg-muted/40">
-                <CardContent className="space-y-3 pt-6">
-                  <div>
-                    <p className="font-medium">{d.razonSocial}</p>
-                    <p className="text-xs text-muted-foreground">CUIT {d.cuit}</p>
-                    <p className="font-mono text-xs text-muted-foreground">
-                      {shortAddress(d.wallet)}
-                    </p>
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {data.items.map((d, i) => (
+            <Link
+              key={d.wallet}
+              to={`/developers/${d.wallet}`}
+              className="animate-fade-up block"
+              style={{ animationDelay: `${Math.min(i, 9) * 60}ms` }}
+            >
+              <Card className="card-hover h-full border-[var(--fen-border)]">
+                <CardContent className="space-y-4 p-5">
+                  <div className="flex items-center gap-3">
+                    <span
+                      className="flex size-12 shrink-0 items-center justify-center rounded-xl font-serif text-lg font-semibold text-white shadow-sm"
+                      style={{ background: avatarGradient(d.wallet) }}
+                    >
+                      {initials(d.razonSocial)}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="flex items-center gap-1.5 truncate font-semibold text-[var(--fen-ink)]">
+                        <Building2 className="size-3.5 shrink-0 text-[var(--fen-muted)]" />
+                        {d.razonSocial}
+                      </p>
+                      <p className="text-xs text-[var(--fen-body)]">CUIT {d.cuit}</p>
+                      <p className="font-mono text-xs text-[var(--fen-muted)]">
+                        {shortAddress(d.wallet)}
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex gap-2">
-                    <Badge variant="success">Completados: {d.completed}</Badge>
-                    <Badge variant="destructive">Fallidos: {d.failed}</Badge>
-                  </div>
+                  <ReputationCounts completed={d.completed} failed={d.failed} />
                 </CardContent>
               </Card>
             </Link>

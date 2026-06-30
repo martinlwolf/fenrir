@@ -1,11 +1,19 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { CheckCircle2 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  ArrowRight,
+  Building2,
+  CheckCircle2,
+  Hash,
+  ShieldCheck,
+  Wallet,
+} from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PageHeader } from "@/components/domain/PageHeader";
+import { CertificatePill } from "@/components/domain/CertificateBadge";
 import { TxFeedback } from "@/components/domain/TxFeedback";
 import { useWallet } from "@/providers/WalletProvider";
 import { useWrite } from "@/hooks/useWrite";
@@ -32,80 +40,262 @@ export function RegisterDeveloperPage() {
   );
   const isRegistered = !!developer?.registered;
 
-  if (!hasWallet) {
-    return <p className="text-muted-foreground">Necesitás una wallet para registrarte como developer.</p>;
-  }
-  if (!address) {
-    return <Button onClick={() => void connect()}>Conectar wallet</Button>;
-  }
-  if (!isOnSepolia) {
-    return (
-      <Button variant="destructive" onClick={() => void switchNetwork()}>
-        Cambiar a Sepolia
-      </Button>
-    );
-  }
-
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
-      <h1 className="text-2xl font-semibold">Identidad de developer</h1>
+    <div className="space-y-7">
+      <PageHeader
+        eyebrow="Desarrolladores"
+        title="Convertite en desarrollador"
+        description="Registrá tu identidad on-chain para publicar y fondear proyectos. Tu historial de obras —exitosas y fallidas— queda como reputación verificable."
+      />
 
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">Registro</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {devLoading ? (
-            <p className="text-sm text-muted-foreground">Verificando tu registro…</p>
-          ) : isRegistered ? (
-            <>
-              <div className="flex items-start justify-between gap-3 rounded-md border bg-muted/40 p-3">
-                <div className="space-y-0.5">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="size-4 text-emerald-600" />
-                    <span className="font-medium">{developer.razonSocial}</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground">CUIT {developer.cuit}</p>
-                  <p className="text-xs text-muted-foreground">{shortAddress(address)}</p>
-                </div>
-                <Badge variant="success">Registrado</Badge>
-              </div>
-              <Button asChild>
-                <Link to="/create">Crear proyecto</Link>
-              </Button>
-            </>
-          ) : (
-            <>
-              <p className="text-sm text-muted-foreground">
-                Esta wallet todavía no está registrada como developer en el factory actual.
-                Registrate una vez para poder crear proyectos.
+      <div className="grid gap-6 lg:grid-cols-[1fr_1.1fr]">
+        {/* Panel de valor */}
+        <DeveloperValuePanel />
+
+        {/* Formulario / estado */}
+        <Card className="animate-fade-up border-[var(--fen-border)]">
+          <CardContent className="space-y-5 p-6">
+            {!hasWallet ? (
+              <GateState
+                Icon={Wallet}
+                title="Necesitás una wallet"
+                description="Instalá MetaMask para registrarte como desarrollador en Fenrir."
+                action={
+                  <Button variant="outline" asChild>
+                    <a href="https://metamask.io/download/" target="_blank" rel="noreferrer">
+                      Instalar MetaMask
+                    </a>
+                  </Button>
+                }
+              />
+            ) : !address ? (
+              <GateState
+                Icon={Wallet}
+                title="Conectá tu wallet"
+                description="Conectá tu wallet para empezar el registro on-chain."
+                action={<Button onClick={() => void connect()}>Conectar wallet</Button>}
+              />
+            ) : !isOnSepolia ? (
+              <GateState
+                Icon={ShieldCheck}
+                title="Cambiá de red"
+                description="El registro se firma en la red Sepolia. Cambiá de red para continuar."
+                action={
+                  <Button variant="destructive" onClick={() => void switchNetwork()}>
+                    Cambiar a Sepolia
+                  </Button>
+                }
+              />
+            ) : devLoading ? (
+              <p className="py-8 text-center text-sm text-[var(--fen-muted)]">
+                Verificando tu registro…
               </p>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label htmlFor="razon">Razón social</Label>
-                  <Input id="razon" value={razonSocial} onChange={(e) => setRazonSocial(e.target.value)} />
+            ) : isRegistered ? (
+              <div className="animate-rise space-y-4">
+                <div className="flex items-center gap-3 rounded-xl border border-[color:var(--fen-verified)]/25 bg-[var(--fen-verified-soft)] p-4">
+                  <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-[var(--fen-accent)] text-white">
+                    <CheckCircle2 className="size-5" />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="truncate font-serif text-lg font-semibold text-[var(--fen-ink)]">
+                      {developer.razonSocial}
+                    </p>
+                    <p className="text-sm text-[var(--fen-body)]">CUIT {developer.cuit}</p>
+                    <p className="font-mono text-xs text-[var(--fen-muted)]">
+                      {shortAddress(address)}
+                    </p>
+                  </div>
                 </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="cuit">CUIT</Label>
-                  <Input id="cuit" value={cuit} onChange={(e) => setCuit(e.target.value)} />
-                </div>
-              </div>
-              <Button
-                disabled={register.phase === "signing" || register.phase === "mining" || !razonSocial || !cuit}
-                onClick={() => void register.run(() => registerDeveloper(razonSocial, cuit))}
-              >
-                Registrar developer
-              </Button>
-              {register.phase === "confirmed" && !isRegistered && (
-                <p className="text-sm text-muted-foreground">
-                  Registro confirmado on-chain. Actualizando…
+                <p className="text-sm text-[var(--fen-body)]">
+                  Tu identidad ya está registrada en el factory actual. Ya podés crear y publicar
+                  proyectos.
                 </p>
-              )}
-              <TxFeedback phase={register.phase} error={register.error} />
-            </>
-          )}
-        </CardContent>
-      </Card>
+                <Button variant="brand" className="w-full" asChild>
+                  <Link to="/create">
+                    Crear mi primer proyecto <ArrowRight className="size-4" />
+                  </Link>
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-5">
+                <div>
+                  <h2 className="font-serif text-xl font-semibold text-[var(--fen-ink)]">
+                    Registro de identidad
+                  </h2>
+                  <p className="mt-1 text-sm text-[var(--fen-body)]">
+                    Esta wallet todavía no está registrada como desarrollador. Completá tus datos
+                    una sola vez para poder crear proyectos.
+                  </p>
+                </div>
+
+                <div className="space-y-4">
+                  <Field
+                    id="razon"
+                    label="Razón social"
+                    Icon={Building2}
+                    placeholder="Constructora del Norte S.A."
+                    value={razonSocial}
+                    onChange={setRazonSocial}
+                  />
+                  <Field
+                    id="cuit"
+                    label="CUIT"
+                    Icon={Hash}
+                    placeholder="30-71234567-8"
+                    value={cuit}
+                    onChange={setCuit}
+                  />
+                </div>
+
+                <div className="flex items-start gap-2 rounded-lg bg-[var(--fen-surface)] p-3 text-xs text-[var(--fen-body)]">
+                  <ShieldCheck className="mt-0.5 size-4 shrink-0 text-[var(--fen-accent)]" />
+                  El alta queda registrada on-chain y es pública. Firmás una transacción en Sepolia
+                  desde tu wallet.
+                </div>
+
+                <Button
+                  variant="brand"
+                  className="w-full"
+                  disabled={
+                    register.phase === "signing" ||
+                    register.phase === "mining" ||
+                    !razonSocial ||
+                    !cuit
+                  }
+                  onClick={() => void register.run(() => registerDeveloper(razonSocial, cuit))}
+                >
+                  Registrar desarrollador
+                </Button>
+
+                {register.phase === "confirmed" && !isRegistered && (
+                  <p className="text-center text-sm text-[var(--fen-muted)]">
+                    Registro confirmado on-chain. Actualizando…
+                  </p>
+                )}
+                <TxFeedback phase={register.phase} error={register.error} />
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+function DeveloperValuePanel() {
+  return (
+    <div className="animate-fade-up space-y-5">
+      <div className="overflow-hidden rounded-2xl border border-[var(--fen-border)]">
+        <div className="relative aspect-[16/9]">
+          <img
+            src="/buildings/inv-06.jpg"
+            alt="Edificio en desarrollo"
+            className="size-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-[var(--fen-ink)]/85 to-transparent" />
+          <div className="absolute inset-x-5 bottom-5">
+            <p className="font-serif text-2xl font-semibold text-white">
+              Construí reputación verificable
+            </p>
+            <p className="mt-1 text-sm text-white/80">
+              Cada proyecto suma una credencial soulbound a tu wallet.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid gap-3">
+        <Step
+          n="01"
+          title="Registrá tu identidad"
+          body="Razón social y CUIT firmados on-chain contra el FenrirFactory."
+        />
+        <Step
+          n="02"
+          title="Publicá proyectos"
+          body="Definí hitos, presupuesto y objetivo de fondeo. La comunidad invierte y vota."
+        />
+        <Step
+          n="03"
+          title="Acumulá credenciales"
+          body="Al completar una obra recibís un Certificado de Finalización; si se cancela, uno de Proyecto Fallido."
+        />
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        <CertificatePill kind="completion" label="Finalización" />
+        <CertificatePill kind="failed" label="Proyecto fallido" />
+        <CertificatePill kind="fdt" label="FDT del proyecto" />
+      </div>
+    </div>
+  );
+}
+
+function Step({ n, title, body }: { n: string; title: string; body: string }) {
+  return (
+    <div className="flex gap-3 rounded-xl border border-[var(--fen-border)] bg-card p-4">
+      <span className="font-mono text-sm font-bold text-[var(--fen-accent)]">{n}</span>
+      <div>
+        <p className="font-semibold text-[var(--fen-ink)]">{title}</p>
+        <p className="text-sm text-[var(--fen-body)]">{body}</p>
+      </div>
+    </div>
+  );
+}
+
+function Field({
+  id,
+  label,
+  Icon,
+  placeholder,
+  value,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  Icon: typeof Building2;
+  placeholder: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <Label htmlFor={id}>{label}</Label>
+      <div className="relative">
+        <Icon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--fen-muted)]" />
+        <Input
+          id={id}
+          value={value}
+          placeholder={placeholder}
+          onChange={(e) => onChange(e.target.value)}
+          className="pl-9"
+        />
+      </div>
+    </div>
+  );
+}
+
+function GateState({
+  Icon,
+  title,
+  description,
+  action,
+}: {
+  Icon: typeof Wallet;
+  title: string;
+  description: string;
+  action: ReactNode;
+}) {
+  return (
+    <div className="flex flex-col items-center gap-3 py-8 text-center">
+      <span className="flex size-12 items-center justify-center rounded-full bg-[var(--fen-surface-2)] text-[var(--fen-accent)]">
+        <Icon className="size-6" />
+      </span>
+      <div>
+        <p className="font-semibold text-[var(--fen-ink)]">{title}</p>
+        <p className="mx-auto mt-1 max-w-xs text-sm text-[var(--fen-body)]">{description}</p>
+      </div>
+      {action}
     </div>
   );
 }

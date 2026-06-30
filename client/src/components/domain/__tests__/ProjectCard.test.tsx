@@ -1,7 +1,9 @@
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
 import { ProjectCard } from "../ProjectCard";
+import { WalletProvider } from "@/providers/WalletProvider";
 import type { ProjectResponse } from "@shared/schemas/project.schema";
 
 const project: ProjectResponse = {
@@ -28,13 +30,26 @@ const project: ProjectResponse = {
   currentMilestoneIndex: 0,
 };
 
+// ProjectCard consume react-query (useInvestments) y el contexto de wallet (useMembership),
+// asi que se renderiza envuelto en sus providers.
+function renderCard() {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <WalletProvider>
+        <MemoryRouter>
+          <ProjectCard project={project} />
+        </MemoryRouter>
+      </WalletProvider>
+    </QueryClientProvider>,
+  );
+}
+
 describe("ProjectCard", () => {
   it("muestra tipo y estado del proyecto", () => {
-    render(
-      <MemoryRouter>
-        <ProjectCard project={project} />
-      </MemoryRouter>,
-    );
+    renderCard();
     expect(screen.getByText("Inversión")).toBeInTheDocument();
     expect(screen.getByText("En fondeo")).toBeInTheDocument();
   });

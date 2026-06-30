@@ -1,13 +1,15 @@
 import { useState } from "react";
+import { ThumbsDown, ThumbsUp } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { TxFeedback } from "./TxFeedback";
+import { VoteProgress } from "./VoteProgress";
 import { useWallet } from "@/providers/WalletProvider";
 import { useVotingPower } from "@/hooks/useProposals";
 import { useWrite } from "@/hooks/useWrite";
 import { arbiterDecide, castVote, resolve } from "@/lib/chain/contracts";
-import { formatWei, isPast, timeRemaining } from "@/lib/format";
+import { formatWei, isPast } from "@/lib/format";
 import type { ProposalResponse } from "@shared/schemas/proposal.schema";
 
 const KIND_LABEL = {
@@ -15,15 +17,6 @@ const KIND_LABEL = {
   Milestone: "Hito",
   SaleOffer: "Oferta de venta",
 } as const;
-
-function Row({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex justify-between text-sm">
-      <span className="text-muted-foreground">{label}</span>
-      <span className="font-medium">{value}</span>
-    </div>
-  );
-}
 
 // Panel de voto Si/No para propuestas de Hito y Oferta de venta (castVote). La eleccion de
 // arbitro usa ArbiterElectionPanel.
@@ -89,7 +82,7 @@ export function VotePanel({
           </Badge>
         </div>
       </CardHeader>
-      <CardContent className="space-y-2">
+      <CardContent className="space-y-4">
         {proposal.kind === "Milestone" && milestoneDescription && (
           <div className="rounded-md bg-muted/50 px-3 py-2">
             <p className="mb-1 text-xs font-medium text-muted-foreground">Promesa a verificar</p>
@@ -101,30 +94,45 @@ export function VotePanel({
             </p>
           </div>
         )}
-        <Row label="A favor" value={formatWei(proposal.votesFor)} />
-        <Row label="En contra" value={formatWei(proposal.votesAgainst)} />
-        <Row label="Quórum" value={`${proposal.quorumBps / 100}%${proposal.quorumReached ? " ✓" : ""}`} />
-        <Row label="Umbral" value={`${proposal.approvalThresholdBps / 100}%`} />
-        {active && !expired && (
-          <Row label="Tiempo restante" value={timeRemaining(proposal.deadline)} />
-        )}
+
+        {/* Balanza en vivo: A favor/En contra, quórum y cuenta regresiva. */}
+        <VoteProgress proposal={proposal} active={active} expired={expired} />
+
         {proposal.result !== "None" && (
-          <Row label="Resultado" value={proposal.result === "Approved" ? "Aprobada" : "Rechazada"} />
+          <div className="flex items-center justify-between rounded-md bg-[var(--fen-surface)] px-3 py-2 text-sm">
+            <span className="text-[var(--fen-muted)]">Resultado</span>
+            <Badge variant={proposal.result === "Approved" ? "success" : "destructive"}>
+              {proposal.result === "Approved" ? "Aprobada" : "Rechazada"}
+            </Badge>
+          </div>
         )}
+
         {power.data && (
-          <Row
-            label="Tu poder de voto"
-            value={`${formatWei(power.data.votingPower)}${power.data.hasVoted ? " (ya votaste)" : ""}`}
-          />
+          <div className="flex items-center justify-between rounded-md border border-[var(--fen-border)] px-3 py-2 text-sm">
+            <span className="text-[var(--fen-muted)]">Tu poder de voto</span>
+            <span className="font-semibold text-[var(--fen-ink)]">
+              {formatWei(power.data.votingPower)}
+              {power.data.hasVoted && (
+                <span className="ml-1.5 text-xs font-medium text-[var(--fen-accent-strong)]">
+                  · ya votaste
+                </span>
+              )}
+            </span>
+          </div>
         )}
 
         {active && !expired && address && isOnSepolia && !power.data?.hasVoted && !justVoted && (
-          <div className="flex gap-2 pt-2">
-            <Button size="sm" disabled={busy} onClick={() => vote(true)}>
-              A favor
+          <div className="grid grid-cols-2 gap-2 pt-1">
+            <Button variant="brand" disabled={busy} onClick={() => vote(true)}>
+              <ThumbsUp className="size-4" /> A favor
             </Button>
-            <Button size="sm" variant="outline" disabled={busy} onClick={() => vote(false)}>
-              En contra
+            <Button
+              variant="outline"
+              disabled={busy}
+              className="border-[color:var(--fen-clay)]/40 text-[var(--fen-clay)] hover:bg-[var(--fen-clay-soft)]"
+              onClick={() => vote(false)}
+            >
+              <ThumbsDown className="size-4" /> En contra
             </Button>
           </div>
         )}

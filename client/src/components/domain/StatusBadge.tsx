@@ -1,5 +1,20 @@
-// Badges de estado que mapean los enums de shared/ a un color. Solo presentacion: el valor
-// viene de la API, el frontend no lo decide.
+// Badges de estado que mapean los enums de shared/ a un color + icono. Solo presentacion: el
+// valor viene de la API, el frontend no lo decide.
+import {
+  Ban,
+  CheckCircle2,
+  Clock,
+  Coins,
+  HardHat,
+  Hourglass,
+  PauseCircle,
+  RotateCcw,
+  Tag,
+  ThumbsDown,
+  ThumbsUp,
+  Vote,
+  type LucideIcon,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import type {
   MilestoneStatusValue,
@@ -7,7 +22,15 @@ import type {
   ProjectStatusValue,
 } from "@shared/constants/enums";
 
-type Variant = "default" | "secondary" | "destructive" | "outline" | "success" | "warning";
+type Variant =
+  | "default"
+  | "secondary"
+  | "destructive"
+  | "outline"
+  | "success"
+  | "warning"
+  | "brand"
+  | "info";
 
 const PROJECT_LABEL: Record<ProjectStatusValue, string> = {
   Funding: "En fondeo",
@@ -18,14 +41,33 @@ const PROJECT_LABEL: Record<ProjectStatusValue, string> = {
 };
 const PROJECT_VARIANT: Record<ProjectStatusValue, Variant> = {
   Funding: "warning",
-  Building: "default",
-  Selling: "success",
-  Completed: "secondary",
+  Building: "info",
+  Selling: "brand",
+  Completed: "success",
   Cancelled: "destructive",
 };
+const PROJECT_ICON: Record<ProjectStatusValue, LucideIcon> = {
+  Funding: Coins,
+  Building: HardHat,
+  Selling: Tag,
+  Completed: CheckCircle2,
+  Cancelled: Ban,
+};
 
-export function ProjectStatusBadge({ status }: { status: ProjectStatusValue }) {
-  return <Badge variant={PROJECT_VARIANT[status]}>{PROJECT_LABEL[status]}</Badge>;
+export function ProjectStatusBadge({
+  status,
+  className,
+}: {
+  status: ProjectStatusValue;
+  className?: string;
+}) {
+  const Icon = PROJECT_ICON[status];
+  return (
+    <Badge variant={PROJECT_VARIANT[status]} className={className}>
+      <Icon />
+      {PROJECT_LABEL[status]}
+    </Badge>
+  );
 }
 
 const MILESTONE_LABEL: Record<MilestoneStatusValue, string> = {
@@ -41,6 +83,13 @@ const MILESTONE_VARIANT: Record<MilestoneStatusValue, Variant> = {
   Voting: "warning",
   Approved: "success",
   Rejected: "destructive",
+};
+const MILESTONE_ICON: Record<MilestoneStatusValue, LucideIcon> = {
+  Pending: Clock,
+  Declared: Hourglass,
+  Voting: Vote,
+  Approved: ThumbsUp,
+  Rejected: ThumbsDown,
 };
 
 export function MilestoneStatusBadge({
@@ -58,15 +107,36 @@ export function MilestoneStatusBadge({
   retryExpired?: boolean;
 }) {
   if (status === "Voting" && expired) {
-    return <Badge variant="destructive">Votación vencida</Badge>;
+    return (
+      <Badge variant="destructive">
+        <Clock />
+        Votación vencida
+      </Badge>
+    );
   }
   if (status === "Pending" && retryExpired) {
-    return <Badge variant="destructive">Reintento vencido</Badge>;
+    return (
+      <Badge variant="destructive">
+        <RotateCcw />
+        Reintento vencido
+      </Badge>
+    );
   }
   if (status === "Declared" && pausedForFunds) {
-    return <Badge variant="warning">Declarado · sin fondos</Badge>;
+    return (
+      <Badge variant="warning">
+        <PauseCircle />
+        Declarado · sin fondos
+      </Badge>
+    );
   }
-  return <Badge variant={MILESTONE_VARIANT[status]}>{MILESTONE_LABEL[status]}</Badge>;
+  const Icon = MILESTONE_ICON[status];
+  return (
+    <Badge variant={MILESTONE_VARIANT[status]}>
+      <Icon />
+      {MILESTONE_LABEL[status]}
+    </Badge>
+  );
 }
 
 const OFFER_LABEL: Record<OfferStatusValue, string> = {
@@ -81,9 +151,22 @@ const OFFER_VARIANT: Record<OfferStatusValue, Variant> = {
   Approved: "success",
   Rejected: "destructive",
   Refunded: "secondary",
-  Executed: "default",
+  Executed: "brand",
+};
+const OFFER_ICON: Record<OfferStatusValue, LucideIcon> = {
+  Voting: Vote,
+  Approved: ThumbsUp,
+  Rejected: ThumbsDown,
+  Refunded: RotateCcw,
+  Executed: CheckCircle2,
 };
 
 export function OfferStatusBadge({ status }: { status: OfferStatusValue }) {
-  return <Badge variant={OFFER_VARIANT[status]}>{OFFER_LABEL[status]}</Badge>;
+  const Icon = OFFER_ICON[status];
+  return (
+    <Badge variant={OFFER_VARIANT[status]}>
+      <Icon />
+      {OFFER_LABEL[status]}
+    </Badge>
+  );
 }

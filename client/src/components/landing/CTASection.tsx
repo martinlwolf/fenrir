@@ -24,7 +24,7 @@ export function CTASection() {
               Crear proyecto
             </Link>
             <Link
-              to="/"
+              to="/projects"
               className="inline-flex items-center justify-center rounded-[10px] border border-[var(--fen-dark-border)] bg-[var(--fen-dark-surface)] px-[30px] py-4 text-base font-bold text-white transition-colors hover:brightness-110"
             >
               Explorar proyectos
