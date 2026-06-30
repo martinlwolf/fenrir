@@ -17,7 +17,7 @@ export function FeaturedProjectCard({ project }: { project: FeaturedProject }) {
 
   return (
     <Link
-      to="/"
+      to="/projects"
       className="flex flex-col gap-3.5 rounded-[14px] border border-[var(--fen-border)] bg-white p-6 transition-colors hover:border-[var(--fen-border-strong)]"
     >
       <div className="flex items-center justify-between">
