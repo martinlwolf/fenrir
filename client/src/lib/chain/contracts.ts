@@ -33,11 +33,33 @@ async function token(address: string): Promise<Contract> {
 
 // Contratos de SOLO LECTURA: usan el provider, no el signer. Sirven para leer estado on-chain
 // directo, sin depender del backend espejo (que puede estar atrasado).
+function factoryRead(): Contract {
+  return new Contract(env.factoryAddress, FENRIR_FACTORY_ABI, getProvider());
+}
 function projectRead(address: string): Contract {
   return new Contract(address, FENRIR_PROJECT_ABI, getProvider());
 }
 function tokenRead(address: string): Contract {
   return new Contract(address, FENRIR_TOKEN_ABI, getProvider());
+}
+
+export interface OnchainDeveloper {
+  /** La wallet está registrada como developer EN EL FACTORY ACTUAL (lo que valida createProject). */
+  registered: boolean;
+  razonSocial: string;
+  cuit: string;
+}
+
+// Lee el registro de developer directo del factory configurado (env.factoryAddress). Es la
+// fuente de verdad que usa createProject on-chain: si redeployás el factory, el backend espejo
+// puede seguir diciendo "registrado" pero el factory nuevo no te conoce y createProject revierte.
+export async function getOnchainDeveloper(wallet: string): Promise<OnchainDeveloper> {
+  const d = await factoryRead().developers(wallet);
+  return {
+    registered: Boolean(d.registered),
+    razonSocial: String(d.razonSocial),
+    cuit: String(d.cuit),
+  };
 }
 
 export interface RefundInfo {
@@ -154,6 +176,24 @@ export async function cancelStalledMilestone(projectAddress: string): Promise<Tr
 
 export async function pokeFundingGates(projectAddress: string): Promise<TransactionResponse> {
   return (await project(projectAddress)).pokeFundingGates();
+}
+
+// Abre la eleccion de arbitro tras alcanzarse el FMPA. Se firma en una tx aparte (bloque
+// posterior) para que el snapshot incluya a todos los inversores, incluido el que cruzo el FMPA.
+export async function openArbiterElection(projectAddress: string): Promise<TransactionResponse> {
+  return (await project(projectAddress)).openArbiterElection();
+}
+
+// Lee on-chain si la eleccion de arbitro esta pendiente de abrirse (FMPA alcanzado pero la
+// propuesta todavia no se creo). No depende del backend espejo.
+export async function arbiterElectionNeedsOpening(projectAddress: string): Promise<boolean> {
+  const p = projectRead(projectAddress);
+  const [statusRaw, fmpaReached, opened] = await Promise.all([
+    p.status() as Promise<bigint>,
+    p.fmpaReached() as Promise<boolean>,
+    p.arbiterElectionOpened() as Promise<boolean>,
+  ]);
+  return PROJECT_STATUS[Number(statusRaw)] === "Building" && fmpaReached && !opened;
 }
 
 // --- Governor ---

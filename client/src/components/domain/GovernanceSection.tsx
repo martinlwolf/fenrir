@@ -3,6 +3,7 @@ import { useArbiter } from "@/hooks/useArbiter";
 import { useWallet } from "@/providers/WalletProvider";
 import { VotePanel } from "./VotePanel";
 import { ArbiterElectionPanel } from "./ArbiterElectionPanel";
+import { OpenArbiterElectionPanel } from "./OpenArbiterElectionPanel";
 import { LoadingState, EmptyState, ErrorState } from "./states";
 import { sameAddress } from "@/lib/format";
 import type { ProjectDetailResponse } from "@shared/schemas/project.schema";
@@ -14,14 +15,25 @@ export function GovernanceSection({ project }: { project: ProjectDetailResponse 
   const arbiter = useArbiter(project.address);
   const isArbiter = sameAddress(arbiter.data?.currentArbiter, address);
 
+  // Botón para abrir la elección de árbitro (lee on-chain). Se muestra arriba de todo y aparece
+  // aunque todavía no haya propuestas espejadas en el backend.
+  const openElection = <OpenArbiterElectionPanel projectAddress={project.address} />;
+
   if (isLoading) return <LoadingState label="Cargando propuestas…" />;
   if (isError) return <ErrorState onRetry={() => void refetch()} />;
   if (!data || data.length === 0)
-    return <EmptyState title="Sin propuestas activas" />;
+    return (
+      <div className="space-y-4">
+        {openElection}
+        <EmptyState title="Sin propuestas activas" />
+      </div>
+    );
 
   return (
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-      {data.map((proposal) =>
+    <div className="space-y-4">
+      {openElection}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        {data.map((proposal) =>
         proposal.kind === "ArbiterElection" ? (
           <ArbiterElectionPanel
             key={proposal.governorProposalId}
@@ -38,7 +50,8 @@ export function GovernanceSection({ project }: { project: ProjectDetailResponse 
             isArbiter={isArbiter}
           />
         ),
-      )}
+        )}
+      </div>
     </div>
   );
 }

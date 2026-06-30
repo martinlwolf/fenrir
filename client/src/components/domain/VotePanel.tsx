@@ -49,6 +49,9 @@ export function VotePanel({
   // polling en reflejarlo (D4). Ocultamos el boton de inmediato para no mostrarlo junto al
   // "confirmado"; el polling de useProposals termina de actualizar el estado.
   const [justResolved, setJustResolved] = useState(false);
+  // Mismo lag D4 al votar: hasVoted sale del espejo del backend, que tarda un ciclo en
+  // reflejar el VoteCast. Ocultamos los botones de inmediato apenas la firma confirma.
+  const [justVoted, setJustVoted] = useState(false);
   const busy = phase === "signing" || phase === "mining" || phase === "propagating";
   const active = proposal.status === "Active";
   const expired = isPast(proposal.deadline);
@@ -58,7 +61,9 @@ export function VotePanel({
   const awaitingArbiter = proposal.status === "AwaitingArbiter";
 
   function vote(support: boolean) {
-    void run(() => castVote(governorAddress, proposal.governorProposalId, support));
+    void run(() => castVote(governorAddress, proposal.governorProposalId, support)).then((ok) => {
+      if (ok) setJustVoted(true);
+    });
   }
 
   return (
@@ -97,7 +102,7 @@ export function VotePanel({
           />
         )}
 
-        {active && !expired && address && isOnSepolia && !power.data?.hasVoted && (
+        {active && !expired && address && isOnSepolia && !power.data?.hasVoted && !justVoted && (
           <div className="flex gap-2 pt-2">
             <Button size="sm" disabled={busy} onClick={() => vote(true)}>
               A favor
@@ -106,6 +111,12 @@ export function VotePanel({
               En contra
             </Button>
           </div>
+        )}
+
+        {active && !expired && justVoted && !power.data?.hasVoted && (
+          <p className="pt-2 text-xs text-muted-foreground">
+            Voto registrado. Actualizando el estado…
+          </p>
         )}
 
         {canResolve && address && isOnSepolia && (

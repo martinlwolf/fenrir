@@ -9,7 +9,7 @@ const ABI = [
 ];
 const FACTORIES = {
   'OLD (frontend/client.env) 0xB6e8dc': '0xB6e8dc6432D56438B7119f6fB1cC0AFBb86F5451',
-  'NEW (backend .env)        0x5F95eA': '0x265cAaAa1D0362a5098F92d0EDec81325628c06a',
+  'NEW (backend .env)        0x5F95eA': '0x24705e7E810cc2381DcF1e53e73F61858b76b3b1',
 };
 
 for (const [label, addr] of Object.entries(FACTORIES)) {
