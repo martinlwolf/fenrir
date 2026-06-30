@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { CheckCircle2, Vote, XCircle } from "lucide-react";
+import { CheckCircle2, Gavel, Vote, XCircle } from "lucide-react";
 import { useMyProposalsFeed } from "@/hooks/useMyVotableProposals";
 import { shortAddress, timeRemaining } from "@/lib/format";
 import type {
@@ -27,6 +27,8 @@ interface Seen {
 //  - cuando se ABRE una votacion del proyecto (a todos los inversores, puedan votar o no);
 //    si la wallet puede votar, el boton lleva directo a Gobernanza.
 //  - cuando la votacion se RESUELVE (aprobada/rechazada).
+//  - cuando una votacion queda TRABADA esperando al arbitro, solo a la wallet arbitro, con
+//    un boton directo al desempate.
 // Las resoluciones solo se avisan en la transicion observada en la sesion (no spamea el
 // historial al cargar).
 export function VoteNotifications() {
@@ -34,12 +36,13 @@ export function VoteNotifications() {
   const navigate = useNavigate();
   const prev = useRef<Map<string, Seen>>(new Map());
   const openNotified = useRef<Set<string>>(new Set());
+  const arbiterNotified = useRef<Set<string>>(new Set());
   const initialized = useRef(false);
 
   useEffect(() => {
     if (!data) return;
 
-    for (const { proposal, projectAddress, canVote } of data) {
+    for (const { proposal, projectAddress, canVote, isArbiter } of data) {
       const key = `${projectAddress}:${proposal.governorProposalId}`;
       const before = prev.current.get(key);
       const kind = KIND_LABEL[proposal.kind];
@@ -67,7 +70,28 @@ export function VoteNotifications() {
         openNotified.current.delete(key);
       }
 
-      // 2) Resolucion (aprobada/rechazada), solo en la transicion vista en esta sesion.
+      // 2) Trabada esperando desempate: avisar UNA vez, solo si la wallet es el arbitro.
+      const awaitingArbiter = proposal.status === "AwaitingArbiter";
+      if (awaitingArbiter && isArbiter && !arbiterNotified.current.has(key)) {
+        arbiterNotified.current.add(key);
+        toast.warning(`Desempate pendiente · ${kind}`, {
+          id: `${key}:arbiter`,
+          icon: <Gavel className="size-4" />,
+          description: `Proyecto ${shortAddress(projectAddress)} · empate o falta de quórum, tu voto define`,
+          duration: Infinity,
+          action: {
+            label: "Ir a desempatar",
+            onClick: () => navigate(`/projects/${projectAddress}?tab=governance`),
+          },
+        });
+      }
+      // Cuando deja de estar trabada, sacamos el toast de desempate.
+      if (!awaitingArbiter && arbiterNotified.current.has(key)) {
+        toast.dismiss(`${key}:arbiter`);
+        arbiterNotified.current.delete(key);
+      }
+
+      // 3) Resolucion (aprobada/rechazada), solo en la transicion vista en esta sesion.
       const justResolved =
         initialized.current &&
         before &&

@@ -3,6 +3,7 @@
 // espere la confirmacion. NINGUN componente llama esto directo: pasa por hooks.
 import { Contract, type TransactionResponse } from "ethers";
 import {
+  PROJECT_STATUS,
   PROJECT_TYPE,
   VOTING_MODE,
   type ProjectTypeValue,
@@ -15,7 +16,7 @@ import {
   FENRIR_TOKEN_ABI,
 } from "@shared/chain/abis";
 import { env } from "../env";
-import { getSigner } from "./provider";
+import { getProvider, getSigner } from "./provider";
 
 async function factory(): Promise<Contract> {
   return new Contract(env.factoryAddress, FENRIR_FACTORY_ABI, await getSigner());
@@ -28,6 +29,39 @@ async function governor(address: string): Promise<Contract> {
 }
 async function token(address: string): Promise<Contract> {
   return new Contract(address, FENRIR_TOKEN_ABI, await getSigner());
+}
+
+// Contratos de SOLO LECTURA: usan el provider, no el signer. Sirven para leer estado on-chain
+// directo, sin depender del backend espejo (que puede estar atrasado).
+function projectRead(address: string): Contract {
+  return new Contract(address, FENRIR_PROJECT_ABI, getProvider());
+}
+function tokenRead(address: string): Contract {
+  return new Contract(address, FENRIR_TOKEN_ABI, getProvider());
+}
+
+export interface RefundInfo {
+  /** El proyecto esta cancelado on-chain (independiente del espejo del backend). */
+  cancelled: boolean;
+  /** ETH (wei) que la wallet puede reclamar ahora via claimRefund(). */
+  claimable: bigint;
+}
+
+// Lee directo de la cadena si la wallet tiene un reembolso por reclamar en un proyecto
+// cancelado. No pasa por el backend: funciona aunque el espejo no haya ingerido la cancelacion.
+export async function getRefundInfo(projectAddress: string, wallet: string): Promise<RefundInfo> {
+  const p = projectRead(projectAddress);
+  const cancelled = PROJECT_STATUS[Number(await p.status())] === "Cancelled";
+  if (!cancelled) return { cancelled: false, claimable: 0n };
+
+  const t = tokenRead((await p.token()) as string);
+  const [balance, supply, pool] = await Promise.all([
+    t.balanceOf(wallet) as Promise<bigint>,
+    t.totalSupply() as Promise<bigint>,
+    p.refundPool() as Promise<bigint>,
+  ]);
+  const claimable = supply > 0n ? (pool * balance) / supply : 0n;
+  return { cancelled: true, claimable };
 }
 
 // --- Factory ---
