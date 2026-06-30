@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { LoadingState, ErrorState } from "@/components/domain/states";
-import { shortAddress } from "@/lib/format";
+import { AddressTag } from "@/components/domain/AddressTag";
 
 // Pagina del reporte de un hito: el contenido que subio el developer (texto + fotos + docs)
 // renderizado inline, mas el origen IPFS y la verificacion de hash. Es la pagina a la que
@@ -46,8 +46,9 @@ export function MilestoneReportPage() {
     );
   }
 
-  // CID del manifest en IPFS -> gateway publico (ipfs.io) para inspeccionarlo crudo.
-  const ipfsManifestUrl = data.cid ? `https://ipfs.io/ipfs/${data.cid}` : null;
+  // URL del manifest en el gateway de Pinata (el mismo que sirve las imagenes). NO usar un
+  // gateway publico como ipfs.io: da 502 para CIDs pineados solo en Pinata.
+  const ipfsManifestUrl = data.manifestUrl;
 
   return (
     <div className="space-y-6">
@@ -63,15 +64,11 @@ export function MilestoneReportPage() {
         )}
       </div>
 
-      <p className="font-mono text-xs text-muted-foreground">
-        Proyecto {shortAddress(data.projectAddress)}
-        {data.cid && (
-          <>
-            {" · "}
-            CID {data.cid}
-          </>
-        )}
-      </p>
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+        <span>Proyecto</span>
+        <AddressTag address={data.projectAddress} />
+        {data.cid && <span className="font-mono">· CID {data.cid}</span>}
+      </div>
 
       {ipfsManifestUrl && (
         <Button variant="outline" size="sm" asChild>

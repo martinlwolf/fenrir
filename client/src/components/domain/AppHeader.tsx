@@ -4,7 +4,7 @@ import { AlertTriangle, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FenrirLogo } from "@/components/landing/FenrirLogo";
 import { useWallet } from "@/providers/WalletProvider";
-import { shortAddress } from "@/lib/format";
+import { AddressTag } from "@/components/domain/AddressTag";
 import { cn } from "@/lib/utils";
 
 const NAV = [
@@ -91,7 +91,7 @@ export function AppHeader({ overlay = false }: { overlay?: boolean }) {
             >
               <span className="size-1.5 rounded-full bg-[var(--fen-accent)]" />
               <Wallet className="size-3.5" />
-              {shortAddress(address)}
+              <AddressTag address={address} />
             </span>
           ) : hasWallet ? (
             <Button

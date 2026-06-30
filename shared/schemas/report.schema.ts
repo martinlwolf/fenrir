@@ -27,6 +27,9 @@ export const reportResponseSchema = z.object({
   // CID del manifest en IPFS (null con storage local). Permite ver/recuperar el reporte
   // directo desde un gateway aunque el frontend este caido.
   cid: z.string().nullable(),
+  // URL del manifest en el gateway configurado (el mismo que sirve las imagenes/docs).
+  // Null con storage local. Se usa para el link "Ver en IPFS".
+  manifestUrl: z.string().nullable(),
   // Verificacion del hash on-chain vs. contenido almacenado (null si aun no se observo
   // la declaracion on-chain).
   onChainHash: z.string().nullable(),

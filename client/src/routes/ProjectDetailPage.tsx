@@ -11,6 +11,7 @@ import { ClaimCommissionPanel } from "@/components/domain/ClaimCommissionPanel";
 import { MaintenancePanel } from "@/components/domain/MaintenancePanel";
 import { RefundPanel } from "@/components/domain/RefundPanel";
 import { ProjectStatusBadge } from "@/components/domain/StatusBadge";
+import { AddressTag } from "@/components/domain/AddressTag";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -71,7 +72,9 @@ export function ProjectDetailPage() {
         </div>
       </div>
 
-      <p className="font-mono text-xs text-muted-foreground">{project.address}</p>
+      <p className="text-xs text-muted-foreground">
+        <AddressTag address={project.address} full />
+      </p>
 
       {/* Reembolso leido on-chain: aparece aunque el backend no haya espejado la cancelacion. */}
       <RefundPanel projectAddress={project.address} />

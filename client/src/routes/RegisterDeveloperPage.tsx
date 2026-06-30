@@ -19,7 +19,7 @@ import { useWallet } from "@/providers/WalletProvider";
 import { useWrite } from "@/hooks/useWrite";
 import { useOnchainDeveloper } from "@/hooks/useOnchainDeveloper";
 import { registerDeveloper } from "@/lib/chain/contracts";
-import { shortAddress } from "@/lib/format";
+import { AddressTag } from "@/components/domain/AddressTag";
 
 // Alta de developer (on-chain) firmando contra el FenrirFactory (FR-012). El registro se LEE
 // directo del factory on-chain (no del backend espejo), porque eso es lo que valida
@@ -101,8 +101,8 @@ export function RegisterDeveloperPage() {
                       {developer.razonSocial}
                     </p>
                     <p className="text-sm text-[var(--fen-body)]">CUIT {developer.cuit}</p>
-                    <p className="font-mono text-xs text-[var(--fen-muted)]">
-                      {shortAddress(address)}
+                    <p className="text-xs text-[var(--fen-muted)]">
+                      <AddressTag address={address} />
                     </p>
                   </div>
                 </div>

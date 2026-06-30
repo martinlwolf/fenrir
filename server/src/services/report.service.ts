@@ -100,19 +100,29 @@ export class ReportService {
     return { reportId, reportUrl, reportHash: computedHash };
   }
 
-  async getReport(id: number): Promise<ReturnType<MilestoneReport["toResponse"]>> {
-    const report = await this.reports.findById(id);
-    if (!report) throw new NotFoundException("Report not found");
-    return report.toResponse();
+  // Construye la URL del manifest en el gateway configurado (el mismo que sirve los
+  // archivos). Se sirve por Pinata, NO por un gateway publico tipo ipfs.io: estos ultimos
+  // tienen que DESCUBRIR el contenido en la red y suelen fallar con 502 para CIDs pineados
+  // solo en Pinata, mientras que el gateway de Pinata siempre tiene el contenido.
+  private withManifestUrl<T extends { cid: string | null }>(
+    resp: T,
+  ): T & { manifestUrl: string | null } {
+    const manifestUrl = resp.cid
+      ? `${env.PINATA_GATEWAY.replace(/\/$/, "")}/ipfs/${resp.cid}`
+      : null;
+    return { ...resp, manifestUrl };
   }
 
-  async getByProjectMilestone(
-    projectAddress: string,
-    milestoneIndex: number,
-  ): Promise<ReturnType<MilestoneReport["toResponse"]>> {
+  async getReport(id: number) {
+    const report = await this.reports.findById(id);
+    if (!report) throw new NotFoundException("Report not found");
+    return this.withManifestUrl(report.toResponse());
+  }
+
+  async getByProjectMilestone(projectAddress: string, milestoneIndex: number) {
     const report = await this.reports.findLatestByProjectMilestone(projectAddress, milestoneIndex);
     if (!report) throw new NotFoundException("Report not found");
-    return report.toResponse();
+    return this.withManifestUrl(report.toResponse());
   }
 
   async getVerification(id: number): Promise<ReturnType<MilestoneReport["toVerification"]>> {

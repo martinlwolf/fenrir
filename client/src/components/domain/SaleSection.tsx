@@ -13,7 +13,8 @@ import {
   claimDistribution,
   executeSale,
 } from "@/lib/chain/contracts";
-import { formatWei, sameAddress, shortAddress } from "@/lib/format";
+import { formatWei, sameAddress } from "@/lib/format";
+import { AddressTag } from "./AddressTag";
 import type { ProjectDetailResponse } from "@shared/schemas/project.schema";
 import type { SaleOfferResponse } from "@shared/schemas/sale.schema";
 
@@ -55,7 +56,9 @@ function OfferRow({
           <span className="font-medium">{formatWei(offer.amount)}</span>
           <OfferStatusBadge status={offer.status} />
         </div>
-        <p className="text-sm text-muted-foreground">Comprador: {shortAddress(offer.buyerWallet)}</p>
+        <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+          Comprador: <AddressTag address={offer.buyerWallet} />
+        </p>
         <TxFeedback phase={phase} error={error} />
       </div>
       {votable && address && isOnSepolia && (
