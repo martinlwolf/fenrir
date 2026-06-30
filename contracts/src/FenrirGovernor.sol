@@ -11,6 +11,7 @@ import {
     QUORUM_BPS,
     APPROVAL_THRESHOLD_BPS,
     DEVELOPER_SALE_VOTE_WEIGHT,
+    ARBITER_DECISION_WINDOW,
     BPS_DENOMINATOR
 } from "./FenrirConstants.sol";
 
@@ -336,6 +337,12 @@ contract FenrirGovernor is ERC1155, IFenrirGovernorArbiter, IFenrirGovernorMinim
                 _resolveByRandom(proposalId, p, quorumReached);
             } else {
                 p.status = ProposalStatus.AwaitingArbiter;
+                // Reusa `deadline` como cierre de la ventana del arbitro: desde aca tiene
+                // ARBITER_DECISION_WINDOW para decidir. Vencido sin decision, el hito trabado
+                // puede cancelarse (ver FenrirProject.cancelStalledMilestone) para no congelar
+                // el proyecto si el arbitro no aparece. `deadline` ya no se usa para votar
+                // porque castVote/_activeProposal exigen status == Active.
+                p.deadline = block.timestamp + ARBITER_DECISION_WINDOW;
                 emit ProposalAwaitingArbiter(proposalId);
             }
             return;
@@ -371,6 +378,19 @@ contract FenrirGovernor is ERC1155, IFenrirGovernorArbiter, IFenrirGovernorMinim
             p,
             approve ? VoteResult.Approved : VoteResult.Rejected
         );
+    }
+
+    /// True si la propuesta quedo esperando al arbitro y ya vencio ARBITER_DECISION_WINDOW sin
+    /// que decidiera. La consulta el FenrirProject para habilitar la cancelacion de un hito
+    /// trabado por un arbitro que no aparece. El arbitro sigue pudiendo decidir mientras el
+    /// hito no se cancele: gana el primero que actua.
+    function isArbiterTimedOut(
+        uint256 proposalId
+    ) external view override returns (bool) {
+        Proposal storage p = proposals[proposalId];
+        return
+            p.status == ProposalStatus.AwaitingArbiter &&
+            block.timestamp > p.deadline;
     }
 
     /// Solo se llega aca para ProposalKind.ArbiterElection: es la unica votacion que se

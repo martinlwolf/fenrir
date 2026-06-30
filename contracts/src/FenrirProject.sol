@@ -311,8 +311,9 @@ contract FenrirProject is ReentrancyGuard, IFenrirProjectCallback {
         }
     }
 
-    /// Cualquier inversor puede cancelar si el desarrollador no declaro el hito vigente
-    /// antes de su deadline, o si quedo pausado esperando fondos para el proximo hito.
+    /// Cualquier inversor puede cancelar si el desarrollador no declaro el hito vigente antes
+    /// de su deadline, si quedo pausado esperando fondos para el proximo hito, o si la votacion
+    /// del hito quedo trabada esperando a un arbitro que no decide dentro de su ventana.
     function cancelStalledMilestone() external {
         require(status == ProjectStatus.Building, "FenrirProject: not building");
         require(token.balanceOf(msg.sender) > 0, "FenrirProject: not an investor");
@@ -320,7 +321,8 @@ contract FenrirProject is ReentrancyGuard, IFenrirProjectCallback {
         Milestone storage m = milestones[currentMilestoneIndex];
         bool deadlineMissed = m.status == MilestoneStatus.Pending && block.timestamp > m.deadline;
         bool stalledForFunds = m.status == MilestoneStatus.Declared && !_fundsAvailableFor(currentMilestoneIndex);
-        require(deadlineMissed || stalledForFunds, "FenrirProject: milestone not stalled");
+        bool arbiterTimedOut = m.status == MilestoneStatus.Voting && governor.isArbiterTimedOut(m.proposalId);
+        require(deadlineMissed || stalledForFunds || arbiterTimedOut, "FenrirProject: milestone not stalled");
         _cancel();
     }
 

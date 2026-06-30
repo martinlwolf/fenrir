@@ -82,7 +82,9 @@ export function VoteProgress({
           {voted > 0n ? (
             <div className="flex h-full w-full">
               <div
-                className="flex h-full items-center justify-start bg-[var(--fen-accent)] pl-2 transition-[width] duration-500 ease-out"
+                className={`flex h-full items-center justify-start bg-[var(--fen-accent)] transition-[width] duration-500 ease-out ${
+                  forPct > 0 ? "pl-2" : ""
+                }`}
                 style={{ width: `${forPct}%` }}
               >
                 {forPct >= 14 && (
@@ -90,7 +92,9 @@ export function VoteProgress({
                 )}
               </div>
               <div
-                className="flex h-full items-center justify-end bg-[var(--fen-clay)] pr-2 transition-[width] duration-500 ease-out"
+                className={`flex h-full items-center justify-end bg-[var(--fen-clay)] transition-[width] duration-500 ease-out ${
+                  againstPct > 0 ? "pr-2" : ""
+                }`}
                 style={{ width: `${againstPct}%` }}
               >
                 {againstPct >= 14 && (
