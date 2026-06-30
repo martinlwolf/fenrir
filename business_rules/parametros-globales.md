@@ -8,7 +8,7 @@ Estos valores son fijos para **todo el sistema** — no se configuran por proyec
 | Quórum | **51%** | Del FDT en circulación tiene que participar para que una votación sea válida |
 | Umbral de aprobación | **51%** | De los votos emitidos tienen que ser "Sí" para que el hito se apruebe |
 | Período de votación | **1 minuto** | Con cierre anticipado si vota el 100% del FDT en circulación — ver [ciclo-de-hitos.md](ciclo-de-hitos.md) |
-| Plazo de reintento tras un rechazo | **2 minutos** | Tiempo que tiene el desarrollador para volver a declarar el hito rechazado |
+| Plazo de reintento tras un rechazo | **1 día** | Tiempo que tiene el desarrollador para volver a declarar el hito rechazado |
 | Tope de reintentos por hito | **2** (3 votaciones en total) | Ya documentado como regla fija en [ciclo-de-hitos.md](ciclo-de-hitos.md) |
 | Penalización por hito rechazado | `comisión / (cantidad_de_hitos × tope_de_reintentos)` | Ver fórmula abajo |
 

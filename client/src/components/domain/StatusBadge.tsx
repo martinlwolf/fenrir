@@ -46,13 +46,25 @@ const MILESTONE_VARIANT: Record<MilestoneStatusValue, Variant> = {
 export function MilestoneStatusBadge({
   status,
   expired = false,
+  pausedForFunds = false,
+  retryExpired = false,
 }: {
   status: MilestoneStatusValue;
   /** La votacion ya vencio pero todavia no se resolvio on-chain (sigue en estado Voting). */
   expired?: boolean;
+  /** Declarado pero la votacion no abrio: faltan fondos para financiar el hito (pausa indefinida). */
+  pausedForFunds?: boolean;
+  /** Hito rechazado en ventana de reintento (Pending + retryCount>0) cuyo plazo de 2 min ya paso. */
+  retryExpired?: boolean;
 }) {
   if (status === "Voting" && expired) {
     return <Badge variant="destructive">Votación vencida</Badge>;
+  }
+  if (status === "Pending" && retryExpired) {
+    return <Badge variant="destructive">Reintento vencido</Badge>;
+  }
+  if (status === "Declared" && pausedForFunds) {
+    return <Badge variant="warning">Declarado · sin fondos</Badge>;
   }
   return <Badge variant={MILESTONE_VARIANT[status]}>{MILESTONE_LABEL[status]}</Badge>;
 }

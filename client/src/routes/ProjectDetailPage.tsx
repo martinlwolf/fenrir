@@ -103,6 +103,7 @@ export function ProjectDetailPage() {
                 milestones={project.milestones}
                 projectAddress={project.address}
                 developerWallet={project.developerWallet}
+                totalRaised={project.totalRaised}
                 // Solo se puede declarar un hito una vez arrancada la obra: el proyecto llego al
                 // FMPA (status Building) y se resolvio el hito 0 / se eligio arbitro (currentArbiter).
                 obraStarted={project.status === "Building" && project.currentArbiter != null}

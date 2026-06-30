@@ -12,7 +12,7 @@ uint256 constant DEVELOPER_SALE_VOTE_WEIGHT = 1 ether;
 
 uint256 constant COMMISSION_BPS           = 1000;   // 10 %
 uint256 constant MAX_RETRIES_PER_MILESTONE = 2;
-uint256 constant RETRY_WINDOW             = 2 minutes;
+uint256 constant RETRY_WINDOW             = 1 days;
 
 // ─── Compartida ──────────────────────────────────────────────────────────────
 
