@@ -9,6 +9,10 @@ export const api = axios.create({
   // El backend resuelve la auth por firma; mantenemos withCredentials por si usa cookie.
   withCredentials: false,
   timeout: 15000,
+  // ngrok free intercepta las requests de navegador con una pagina de advertencia HTML
+  // (ERR_NGROK_6024) que no trae headers CORS -> el browser lo reporta como "CORS error".
+  // Este header le dice a ngrok que deje pasar la request directo al backend.
+  headers: { "ngrok-skip-browser-warning": "true" },
 });
 
 /** Credencial de sesion por firma de wallet; la setea el SessionProvider tras /auth/verify. */
