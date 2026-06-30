@@ -2,8 +2,10 @@
 import { api } from "@/lib/api";
 import {
   projectDetailResponseSchema,
+  projectInvestorsResponseSchema,
   projectResponseSchema,
   type ProjectDetailResponse,
+  type ProjectInvestorsResponse,
   type ProjectResponse,
 } from "@shared/schemas/project.schema";
 import type { ProjectStatusValue, ProjectTypeValue } from "@shared/constants/enums";
@@ -43,4 +45,12 @@ export async function listBuyerProjects(
 export async function getProject(address: string): Promise<ProjectDetailResponse> {
   const { data } = await api.get(`/projects/${address}`);
   return projectDetailResponseSchema.parse(data);
+}
+
+// Inversores del proyecto = candidatos validos a arbitro (hito 0).
+export async function getProjectInvestors(
+  address: string,
+): Promise<ProjectInvestorsResponse> {
+  const { data } = await api.get(`/projects/${address}/investors`);
+  return projectInvestorsResponseSchema.parse(data);
 }

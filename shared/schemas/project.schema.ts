@@ -62,3 +62,8 @@ export const investmentResponseSchema = z.object({
   block: z.string(),
 });
 export type InvestmentResponse = z.infer<typeof investmentResponseSchema>;
+
+// Wallets distintas que invirtieron en un proyecto. Son los candidatos validos al rol
+// de arbitro (hito 0): cualquier inversor del proyecto (business_rules/ciclo-de-hitos.md).
+export const projectInvestorsResponseSchema = z.array(addressSchema);
+export type ProjectInvestorsResponse = z.infer<typeof projectInvestorsResponseSchema>;

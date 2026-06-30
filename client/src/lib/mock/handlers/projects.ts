@@ -53,6 +53,15 @@ export const projectHandlers = [
     return HttpResponse.json(project?.milestones ?? []);
   }),
 
+  // Inversores del proyecto = candidatos a arbitro (hito 0). Demo: tres wallets fijas.
+  http.get(`${base}/projects/:address/investors`, () => {
+    return HttpResponse.json([
+      "0x" + "11".repeat(20),
+      "0x" + "22".repeat(20),
+      "0x" + "33".repeat(20),
+    ]);
+  }),
+
   http.get(`${base}/reports/:id`, ({ params }) => {
     const report = mockReports[String(params.id)];
     if (!report) {

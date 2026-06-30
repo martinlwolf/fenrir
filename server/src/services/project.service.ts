@@ -8,9 +8,13 @@ import type {
 import type { Paginated } from "@shared/types/api";
 import { NotFoundException } from "../exceptions/common.exception";
 import { ProjectRepository, projectRepository } from "../persistence/repositories/project.repository";
+import { InvestmentRepository, investmentRepository } from "../persistence/repositories/investment.repository";
 
 export class ProjectService {
-  constructor(private readonly projects: ProjectRepository = projectRepository) { }
+  constructor(
+    private readonly projects: ProjectRepository = projectRepository,
+    private readonly investments: InvestmentRepository = investmentRepository,
+  ) { }
 
   async list(query: ProjectListQuery): Promise<Paginated<ProjectResponse>> {
     const { items, total } = await this.projects.list({
@@ -43,6 +47,13 @@ export class ProjectService {
     const project = await this.projects.findByAddress(address);
     if (!project) throw new NotFoundException("Project not found");
     return project.milestones.map((m) => m.toResponse());
+  }
+
+  // Inversores distintos del proyecto = candidatos validos al rol de arbitro (hito 0).
+  async getInvestors(address: string): Promise<string[]> {
+    const project = await this.projects.findByAddress(address);
+    if (!project) throw new NotFoundException("Project not found");
+    return this.investments.listInvestorsByProject(address);
   }
 }
 
