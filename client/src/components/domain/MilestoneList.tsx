@@ -1,6 +1,7 @@
+import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ExternalLink } from "lucide-react";
+import { FileText } from "lucide-react";
 import { MilestoneStatusBadge } from "./StatusBadge";
 import { ReportVerificationBadge } from "./ReportVerificationBadge";
 import { DeclareMilestoneDialog } from "./DeclareMilestoneDialog";
@@ -8,12 +9,6 @@ import { useWallet } from "@/providers/WalletProvider";
 import { useProposals } from "@/hooks/useProposals";
 import { formatWei, formatDate, formatDuration, isPast } from "@/lib/format";
 import type { MilestoneResponse } from "@shared/schemas/project.schema";
-
-function reportIdFromUrl(url: string | null): number | null {
-  if (!url) return null;
-  const match = url.match(/\/reports\/(\d+)/);
-  return match ? Number(match[1]) : null;
-}
 
 function MilestoneItem({
   milestone,
@@ -36,7 +31,10 @@ function MilestoneItem({
   /** Cuanto falta recaudar (wei) para que se pueda abrir la votacion de este hito. */
   fundsShortfall: bigint;
 }) {
-  const reportId = reportIdFromUrl(milestone.reportUrl);
+  // La prueba de cumplimiento existe si el developer ya declaro el hito on-chain
+  // (reportHash presente). El link va a la pagina de reporte del frontend, no a la
+  // reportUrl on-chain, asi funciona igual para declaraciones viejas y nuevas.
+  const hasReport = milestone.reportHash != null;
   const declarable =
     canDeclare &&
     prevResolved &&
@@ -101,7 +99,9 @@ function MilestoneItem({
             más inversión (la ronda sigue abierta hasta el FF) o los inversores cancelen el proyecto.
           </p>
         )}
-        {reportId != null && <ReportVerificationBadge reportId={reportId} />}
+        {hasReport && (
+          <ReportVerificationBadge address={projectAddress} index={milestone.milestoneIndex} />
+        )}
       </div>
       <div className="flex items-center gap-2">
         {declarable && (
@@ -110,11 +110,11 @@ function MilestoneItem({
             milestoneIndex={milestone.milestoneIndex}
           />
         )}
-        {milestone.reportUrl && (
+        {hasReport && (
           <Button variant="outline" size="sm" asChild>
-            <a href={milestone.reportUrl} target="_blank" rel="noreferrer">
-              <ExternalLink /> Reporte
-            </a>
+            <Link to={`/projects/${projectAddress}/milestones/${milestone.milestoneIndex}/report`}>
+              <FileText /> Reporte
+            </Link>
           </Button>
         )}
       </div>

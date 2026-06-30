@@ -95,13 +95,22 @@ export class ReportService {
     //    es el respaldo si esa pagina no responde.
     const reportId = report.id as number;
     const reportUrl = env.FRONTEND_URL
-      ? `${env.FRONTEND_URL.replace(/\/$/, "")}/projects/${projectAddress}`
+      ? `${env.FRONTEND_URL.replace(/\/$/, "")}/projects/${projectAddress}/milestones/${milestoneIndex}/report`
       : `${env.PUBLIC_BASE_URL.replace(/\/$/, "")}/reports/${reportId}`;
     return { reportId, reportUrl, reportHash: computedHash };
   }
 
   async getReport(id: number): Promise<ReturnType<MilestoneReport["toResponse"]>> {
     const report = await this.reports.findById(id);
+    if (!report) throw new NotFoundException("Report not found");
+    return report.toResponse();
+  }
+
+  async getByProjectMilestone(
+    projectAddress: string,
+    milestoneIndex: number,
+  ): Promise<ReturnType<MilestoneReport["toResponse"]>> {
+    const report = await this.reports.findLatestByProjectMilestone(projectAddress, milestoneIndex);
     if (!report) throw new NotFoundException("Report not found");
     return report.toResponse();
   }

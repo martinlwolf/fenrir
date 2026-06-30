@@ -69,6 +69,9 @@ export class MilestoneReport {
     mediaUrls: string[];
     documentUrls: string[];
     reportHash: string;
+    cid: string | null;
+    onChainHash: string | null;
+    hashMatch: boolean | null;
   } {
     const p = this.props;
     return {
@@ -79,6 +82,11 @@ export class MilestoneReport {
       mediaUrls: p.mediaUrls,
       documentUrls: p.documentUrls,
       reportHash: p.computedHash,
+      // Con storage IPFS, storageRef es el CID del manifest (CIDv0 "Qm..."); con storage
+      // local es un namespace de carpeta, que no es un CID -> null.
+      cid: /^Qm[1-9A-HJ-NP-Za-km-z]{44}$/.test(p.storageRef) ? p.storageRef : null,
+      onChainHash: p.onChainHash,
+      hashMatch: p.hashMatch,
     };
   }
 

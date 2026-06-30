@@ -6,6 +6,7 @@ import { VoteNotifications } from "@/components/domain/VoteNotifications";
 import { HomePage } from "@/routes/HomePage";
 import { CatalogPage } from "@/routes/CatalogPage";
 import { ProjectDetailPage } from "@/routes/ProjectDetailPage";
+import { MilestoneReportPage } from "@/routes/MilestoneReportPage";
 import { MyPortfolioPage } from "@/routes/MyPortfolioPage";
 import { DevelopersPage } from "@/routes/DevelopersPage";
 import { DeveloperProfilePage } from "@/routes/DeveloperProfilePage";
@@ -54,6 +55,10 @@ export function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/projects" element={<CatalogPage />} />
           <Route path="/projects/:address" element={<ProjectDetailPage />} />
+          <Route
+            path="/projects/:address/milestones/:index/report"
+            element={<MilestoneReportPage />}
+          />
           <Route path="/portfolio" element={<MyPortfolioPage />} />
           <Route path="/developers" element={<DevelopersPage />} />
           <Route path="/developers/register" element={<RegisterDeveloperPage />} />
