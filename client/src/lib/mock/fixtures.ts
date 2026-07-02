@@ -2,7 +2,11 @@
 // Montos en wei (1 ETH = 1e18). Direcciones 0x + 40 hex en minuscula. El objetivo es poblar
 // la UI con un catalogo variado: ambos tipos de proyecto, todos los estados, y un directorio de
 // desarrolladores con historial de reputacion (certificados de finalizacion / proyecto fallido).
+import type { Display } from "@shared/schemas/common.schema";
+import type { ProjectViewer } from "@shared/schemas/project.schema";
+import type { MilestoneResponse } from "@shared/schemas/project.schema";
 import type { ProjectDetailResponse } from "@shared/schemas/project.schema";
+import type { MilestoneStatusValue, ProjectStatusValue } from "@shared/constants/enums";
 import type { ReportResponse, ReportVerification } from "@shared/schemas/report.schema";
 
 const ETH = (n: number) => (BigInt(Math.round(n * 1000)) * 10n ** 15n).toString();
@@ -76,7 +80,126 @@ export const mockDevelopers: MockDeveloper[] = [
 const devName = (wallet: string) =>
   mockDevelopers.find((d) => d.wallet === wallet)?.razonSocial ?? "Desarrollador";
 
-export const mockProjects: ProjectDetailResponse[] = [
+// --- Helpers de los campos derivados que el backend embebe en cada ProjectResponse ---
+// En prod los calcula/decide el backend; en el mock los precomputamos estaticos y coherentes
+// con el status/montos del fixture (los schemas los exigen y `parse` fallaria sin ellos).
+
+// Porcentaje recaudado sobre el FF, en basis points (0..10000). Tolera ff=0.
+function fundedBpsOf(totalRaised: string, ff: string): number {
+  try {
+    const r = BigInt(totalRaised);
+    const goal = BigInt(ff);
+    if (goal <= 0n) return 0;
+    const bps = Number((r * 10000n) / goal);
+    return Math.min(10000, bps);
+  } catch {
+    return 0;
+  }
+}
+
+// La ronda sigue abierta mientras el proyecto fondea o construye y no alcanzo el FF.
+function fundingOpenOf(status: ProjectStatusValue, totalRaised: string, ff: string): boolean {
+  const belowGoal = fundedBpsOf(totalRaised, ff) < 10000;
+  return belowGoal && (status === "Funding" || status === "Building");
+}
+
+// Label + variante de estado listos para pintar (coherentes con el status del fixture).
+const DISPLAY_BY_STATUS: Record<ProjectStatusValue, Display> = {
+  Funding: { label: "En fondeo", variant: "warning" },
+  Building: { label: "En construcción", variant: "info" },
+  Selling: { label: "En venta", variant: "brand" },
+  Completed: { label: "Completado", variant: "success" },
+  Cancelled: { label: "Cancelado", variant: "destructive" },
+};
+
+// Viewer por defecto: anonimo (sin wallet consultante). El mock no resuelve el viewer por
+// wallet; estatico alcanza para poblar la UI.
+const ANONYMOUS_VIEWER: ProjectViewer = {
+  role: "anonymous",
+  isDeveloper: false,
+  isArbiter: false,
+  isInvestor: false,
+  capabilities: {
+    invest: { allowed: false, reason: "Conectá tu wallet para invertir" },
+    claimCommission: {
+      allowed: false,
+      reason: "Solo el desarrollador puede reclamar la comisión",
+    },
+    // El backend lo computa dinamicamente; en el mock estatico siempre denegado.
+    canExecuteSale: { allowed: false, reason: "Datos de venta no disponibles" },
+  },
+};
+
+// Label + variante de estado del hito listos para pintar (coherentes con el status del fixture).
+// En prod los decide el backend; en el mock los precomputamos estaticos.
+const MILESTONE_DISPLAY_BY_STATUS: Record<MilestoneStatusValue, Display> = {
+  Pending: { label: "Pendiente", variant: "outline" },
+  Declared: { label: "Declarado", variant: "secondary" },
+  Voting: { label: "En votación", variant: "warning" },
+  Approved: { label: "Aprobado", variant: "success" },
+  Rejected: { label: "Rechazado", variant: "destructive" },
+};
+
+// Milestone del fixture sin los campos derivados que el backend embebe; los inyectamos abajo para
+// no repetir display/pausedForFunds/votingExpired/etc. en cada hito.
+type MockMilestoneBase = Omit<
+  MilestoneResponse,
+  | "display"
+  | "pausedForFunds"
+  | "votingExpired"
+  | "retryExpired"
+  | "declarable"
+  | "cumulativeBudget"
+  | "fundsShortfall"
+  | "viewer"
+>;
+
+// Cierra el shape de cada milestone con los campos derivados coherentes con su status. El mock no
+// resuelve el viewer por wallet: canDeclare siempre denegado (solo el developer real declara).
+function fillMilestone(m: MockMilestoneBase, cumulativeBudget: string): MilestoneResponse {
+  return {
+    ...m,
+    display: MILESTONE_DISPLAY_BY_STATUS[m.status],
+    pausedForFunds: false,
+    votingExpired: false,
+    retryExpired: false,
+    declarable: false,
+    cumulativeBudget,
+    fundsShortfall: "0",
+    viewer: {
+      canDeclare: { allowed: false, reason: "Solo el desarrollador puede declarar hitos" },
+    },
+  };
+}
+
+// Presupuesto acumulado hasta cada hito inclusive (suma de budgets con indice <=).
+function fillMilestones(milestones: MockMilestoneBase[]): MilestoneResponse[] {
+  return milestones.map((m) => {
+    const cumulative = milestones
+      .filter((p) => p.milestoneIndex <= m.milestoneIndex)
+      .reduce((sum, p) => sum + BigInt(p.budget), 0n)
+      .toString();
+    return fillMilestone(m, cumulative);
+  });
+}
+
+// Bloque de mantenimiento derivado (solo en el detalle). El mock lo deja en el caso base "sano":
+// ni fondeo vencido ni proyecto estancado.
+const MOCK_MAINTENANCE: ProjectDetailResponse["maintenance"] = {
+  fundingExpired: false,
+  stalled: { active: false, reason: null },
+  canCancelStalled: { allowed: false, reason: "El proyecto no está estancado" },
+};
+
+// Base de los proyectos sin los campos derivados; abajo los inyectamos con los helpers para no
+// repetir fundedBps/fundingOpen/display/viewer/maintenance en cada uno. Los milestones tambien
+// van en su forma base (sin campos derivados de hito).
+type MockProjectBase = Omit<
+  ProjectDetailResponse,
+  "fundedBps" | "fundingOpen" | "display" | "viewer" | "maintenance" | "milestones"
+> & { milestones: MockMilestoneBase[] };
+
+const mockProjectsBase: MockProjectBase[] = [
   {
     address: addr("a1"),
     tokenAddress: addr("b1"),
@@ -461,6 +584,18 @@ export const mockProjects: ProjectDetailResponse[] = [
     milestones: [],
   },
 ];
+
+// Inyectamos los campos derivados (fundedBps/fundingOpen/display/viewer) para cerrar el shape que
+// exigen los schemas de shared/. viewer estatico anonimo: el mock no lo resuelve por wallet.
+export const mockProjects: ProjectDetailResponse[] = mockProjectsBase.map((p) => ({
+  ...p,
+  milestones: fillMilestones(p.milestones),
+  fundedBps: fundedBpsOf(p.totalRaised, p.ff),
+  fundingOpen: fundingOpenOf(p.status, p.totalRaised, p.ff),
+  display: DISPLAY_BY_STATUS[p.status],
+  viewer: ANONYMOUS_VIEWER,
+  maintenance: MOCK_MAINTENANCE,
+}));
 
 export const mockReports: Record<string, ReportResponse> = {
   "2": {

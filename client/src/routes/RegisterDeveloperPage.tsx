@@ -17,7 +17,7 @@ import { CertificatePill } from "@/components/domain/CertificateBadge";
 import { TxFeedback } from "@/components/domain/TxFeedback";
 import { useWallet } from "@/providers/WalletProvider";
 import { useWrite } from "@/hooks/useWrite";
-import { useOnchainDeveloper } from "@/hooks/useOnchainDeveloper";
+import { useDeveloper } from "@/hooks/useDeveloper";
 import { registerDeveloper } from "@/lib/chain/contracts";
 import { AddressTag } from "@/components/domain/AddressTag";
 
@@ -28,17 +28,15 @@ import { AddressTag } from "@/components/domain/AddressTag";
 export function RegisterDeveloperPage() {
   const { address, isOnSepolia, connect, switchNetwork, hasWallet } = useWallet();
 
-  const register = useWrite(address ? [["onchain-developer", address]] : []);
+  const register = useWrite();
   const [razonSocial, setRazonSocial] = useState("");
   const [cuit, setCuit] = useState("");
 
-  // Tras confirmar el alta on-chain sondeamos el factory hasta verla registrada, sin que el
-  // usuario recargue (poll directo a la cadena, no al backend).
-  const { data: developer, isLoading: devLoading } = useOnchainDeveloper(
-    address,
-    register.phase === "confirmed",
-  );
-  const isRegistered = !!developer?.registered;
+  // Tras confirmar la tx on-chain sondeamos el backend (espeja el evento DeveloperRegistered
+  // en segundos) hasta ver el alta reflejada, sin que el usuario recargue.
+  const developer = useDeveloper(address ?? undefined, register.phase === "confirmed");
+  const isRegistered = !!developer.data;
+  const devLoading = developer.isLoading;
 
   return (
     <div className="space-y-7">
@@ -98,9 +96,9 @@ export function RegisterDeveloperPage() {
                   </span>
                   <div className="min-w-0">
                     <p className="truncate font-serif text-lg font-semibold text-[var(--fen-ink)]">
-                      {developer.razonSocial}
+                      {developer.data?.razonSocial}
                     </p>
-                    <p className="text-sm text-[var(--fen-body)]">CUIT {developer.cuit}</p>
+                    <p className="text-sm text-[var(--fen-body)]">CUIT {developer.data?.cuit}</p>
                     <p className="text-xs text-[var(--fen-muted)]">
                       <AddressTag address={address} />
                     </p>

@@ -3,20 +3,21 @@ import { Button } from "@/components/ui/button";
 import { TxFeedback } from "./TxFeedback";
 import { useWallet } from "@/providers/WalletProvider";
 import { useWrite } from "@/hooks/useWrite";
-import { useArbiterElectionState } from "@/hooks/useArbiterElectionState";
+import { useArbiter } from "@/hooks/useArbiter";
 import { openArbiterElection } from "@/lib/chain/contracts";
 
 // Apenas se alcanza el FMPA, la elección de árbitro NO se abre sola: se abre en una tx aparte
 // (bloque posterior) para que el snapshot de voto incluya a todos los inversores, incluido el
 // que cruzó el FMPA (si se abriera en el mismo bloque, ese inversor tendría 0 poder de voto).
-// Lee el estado on-chain, así aparece aunque el backend esté atrasado. Cualquiera puede abrirla.
+// needsOpening lo calcula el backend (arbiterResponseSchema.needsOpening). Cualquiera puede abrir.
 export function OpenArbiterElectionPanel({ projectAddress }: { projectAddress: string }) {
   const { address, isOnSepolia, connect, switchNetwork, hasWallet } = useWallet();
-  const { data: needsOpening } = useArbiterElectionState(projectAddress);
+  const arbiter = useArbiter(projectAddress);
+  const needsOpening = arbiter.data?.needsOpening ?? false;
   const { phase, error, run } = useWrite([
-    ["arbiter-election-state", projectAddress],
     ["proposals", projectAddress],
     ["project", projectAddress],
+    ["arbiter", projectAddress],
   ]);
   const busy = phase === "signing" || phase === "mining" || phase === "propagating";
 

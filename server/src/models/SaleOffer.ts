@@ -10,10 +10,16 @@ export interface SaleOfferProps {
   status: OfferStatusValue;
 }
 
+// Campos base que el model puede derivar sin conocer el viewer ni la policy de display.
+// Los campos display/votable/viewer los agrega el service con offerViewerFields (SalePolicy).
+export type SaleOfferBase = Omit<SaleOfferResponse, "display" | "votable" | "viewer">;
+
 export class SaleOffer {
   constructor(private readonly props: SaleOfferProps) {}
 
-  toResponse(): SaleOfferResponse {
+  // Devuelve los campos base de la oferta. Los campos derivados del viewer (display,
+  // votable, viewer) se suman en SaleService usando offerViewerFields de SalePolicy.
+  toResponse(): SaleOfferBase {
     const p = this.props;
     return {
       offerId: p.offerId,

@@ -8,7 +8,7 @@ export class SaleController {
 
   offers = async (req: Request, res: Response): Promise<void> => {
     const { address } = addressParamSchema.parse(req.params);
-    res.json(await this.sales.listOffers(address));
+    res.json(await this.sales.listOffers(address, req.viewerWallet ?? null));
   };
 
   distribution = async (req: Request, res: Response): Promise<void> => {

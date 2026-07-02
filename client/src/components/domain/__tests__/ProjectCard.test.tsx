@@ -28,6 +28,24 @@ const project: ProjectResponse = {
   penaltyAccumulatedBps: 0,
   currentArbiter: null,
   currentMilestoneIndex: 0,
+  // Campos derivados que ahora el backend embebe (el front no los calcula).
+  fundedBps: 3500,
+  fundingOpen: true,
+  display: { label: "En fondeo", variant: "warning" },
+  viewer: {
+    role: "anonymous",
+    isDeveloper: false,
+    isArbiter: false,
+    isInvestor: false,
+    capabilities: {
+      invest: { allowed: false, reason: "Conectá tu wallet para invertir" },
+      claimCommission: {
+        allowed: false,
+        reason: "Solo el desarrollador puede reclamar la comisión",
+      },
+      canExecuteSale: { allowed: false, reason: "Datos de venta no disponibles" },
+    },
+  },
 };
 
 // ProjectCard consume react-query (useInvestments) y el contexto de wallet (useMembership),

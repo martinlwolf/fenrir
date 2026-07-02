@@ -23,6 +23,11 @@ function liveMilestoneProposal() {
   const votesFor = voted * forShare;
   const votesAgainst = voted - votesFor;
   const quorumTarget = totalPower * 0.51;
+  const quorumReached = voted >= quorumTarget;
+  const forPct = voted > 0 ? votesFor / voted : 0;
+  const passing = quorumReached && forPct >= 0.51;
+  const lead = voted === 0 ? "none" : votesFor > votesAgainst ? "for" : votesFor < votesAgainst ? "against" : "tie";
+  const quorumRemainingWei = quorumReached ? "0" : ETH(Math.max(0, quorumTarget - voted));
   return {
     governorProposalId: 2,
     kind: "Milestone" as const,
@@ -36,10 +41,20 @@ function liveMilestoneProposal() {
     weightVoted: ETH(voted),
     quorumBps: 5100,
     approvalThresholdBps: 5100,
-    quorumReached: voted >= quorumTarget,
+    quorumReached,
     status: "Active" as const,
     result: "None" as const,
     electedArbiter: null,
+    // Campos derivados FR-020
+    active: true,
+    expired: false,
+    canResolve: false,
+    awaitingArbiter: false,
+    display: { label: "En votación", variant: "warning" as const },
+    lead: lead as "none" | "for" | "against" | "tie",
+    passing,
+    quorumRemainingWei,
+    viewer: { canBreakTie: { allowed: false, reason: "Solo el árbitro puede desempatar" } },
   };
 }
 
@@ -53,6 +68,11 @@ function contestedMilestoneProposal() {
   const againstShare = 0.6 + 0.05 * Math.sin(p * Math.PI);
   const votesAgainst = voted * againstShare;
   const votesFor = voted - votesAgainst;
+  const quorumReached = voted >= totalPower * 0.51;
+  const forPct = voted > 0 ? votesFor / voted : 0;
+  const passing = quorumReached && forPct >= 0.51;
+  const lead = voted === 0 ? "none" : votesFor > votesAgainst ? "for" : votesFor < votesAgainst ? "against" : "tie";
+  const quorumRemainingWei = quorumReached ? "0" : ETH(Math.max(0, totalPower * 0.51 - voted));
   return {
     governorProposalId: 7,
     kind: "Milestone" as const,
@@ -66,10 +86,20 @@ function contestedMilestoneProposal() {
     weightVoted: ETH(voted),
     quorumBps: 5100,
     approvalThresholdBps: 5100,
-    quorumReached: voted >= totalPower * 0.51,
+    quorumReached,
     status: "Active" as const,
     result: "None" as const,
     electedArbiter: null,
+    // Campos derivados FR-020
+    active: true,
+    expired: false,
+    canResolve: false,
+    awaitingArbiter: false,
+    display: { label: "En votación", variant: "warning" as const },
+    lead: lead as "none" | "for" | "against" | "tie",
+    passing,
+    quorumRemainingWei,
+    viewer: { canBreakTie: { allowed: false, reason: "Solo el árbitro puede desempatar" } },
   };
 }
 
@@ -102,6 +132,8 @@ export const governanceHandlers = [
       snapshotBlock: "1000500",
       votingPower: ETH(2),
       hasVoted: false,
+      // canVote lo compone el backend: poder > 0, no votó y propuesta activa.
+      canVote: false,
     });
   }),
 
@@ -111,6 +143,8 @@ export const governanceHandlers = [
       projectAddress: String(params.address),
       currentArbiter: project?.currentArbiter ?? null,
       electionInProgress: false,
+      // needsOpening: false en el mock (ningún proyecto simulado está en el punto exacto de abrir).
+      needsOpening: false,
     });
   }),
 

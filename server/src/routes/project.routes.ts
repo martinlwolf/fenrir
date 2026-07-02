@@ -3,13 +3,24 @@ import { Router } from "express";
 import { registerReadPath } from "../config/docs/openapi";
 import { projectController } from "../controllers/project.controller";
 import { asyncHandler } from "../middlewares/asyncHandler";
+import { resolveViewer } from "../middlewares/resolveViewer";
 
 export const projectRouter = Router();
 
-projectRouter.get("/projects", asyncHandler(projectController.list));
-projectRouter.get("/projects/buyer-view", asyncHandler(projectController.buyerView));
-projectRouter.get("/projects/:address", asyncHandler(projectController.detail));
-projectRouter.get("/projects/:address/milestones", asyncHandler(projectController.milestones));
+// resolveViewer (opcional, no bloquea) resuelve la wallet consultante para que el service
+// embeba viewer/capabilities en el DTO. Solo en las rutas que devuelven proyectos.
+projectRouter.get("/projects", resolveViewer, asyncHandler(projectController.list));
+projectRouter.get(
+  "/projects/buyer-view",
+  resolveViewer,
+  asyncHandler(projectController.buyerView),
+);
+projectRouter.get("/projects/:address", resolveViewer, asyncHandler(projectController.detail));
+projectRouter.get(
+  "/projects/:address/milestones",
+  resolveViewer,
+  asyncHandler(projectController.milestones),
+);
 projectRouter.get("/projects/:address/investors", asyncHandler(projectController.investors));
 
 registerReadPath({

@@ -16,6 +16,10 @@ export const saleHandlers = [
         amount: ETH(78),
         proposalId: 10,
         status: "Voting",
+        // Campos requeridos por SaleOfferResponse (F4): el backend los deriva, el front solo pinta.
+        display: { label: "En votación", variant: "warning" },
+        votable: true,
+        viewer: { usesDeveloperVote: false },
       },
       {
         offerId: 2,
@@ -23,6 +27,9 @@ export const saleHandlers = [
         amount: ETH(60),
         proposalId: 11,
         status: "Rejected",
+        display: { label: "Rechazada", variant: "destructive" },
+        votable: false,
+        viewer: { usesDeveloperVote: false },
       },
     ]);
   }),

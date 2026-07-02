@@ -66,6 +66,18 @@ export class InvestmentRepository {
     return rows.map((r) => r.investorWallet);
   }
 
+  // True si la wallet tiene al menos una inversion registrada en el proyecto. Se usa para
+  // derivar el rol/capabilities del viewer (no decide nada on-chain, solo lee el espejo).
+  async hasInvested(projectAddress: string, wallet: string): Promise<boolean> {
+    const count = await this.db.investment.count({
+      where: {
+        projectAddress: projectAddress.toLowerCase(),
+        investorWallet: wallet.toLowerCase(),
+      },
+    });
+    return count > 0;
+  }
+
   async listByInvestor(wallet: string): Promise<Investment[]> {
     const rows = await this.db.investment.findMany({
       where: { investorWallet: wallet.toLowerCase() },

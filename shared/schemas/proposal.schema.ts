@@ -5,7 +5,7 @@ import {
   PROPOSAL_RESULT,
   PROPOSAL_STATUS,
 } from "../constants/enums";
-import { addressSchema, weiStringSchema } from "./common.schema";
+import { addressSchema, capabilitySchema, displaySchema, weiStringSchema } from "./common.schema";
 
 export const proposalResponseSchema = z.object({
   governorProposalId: z.number().int(),
@@ -26,6 +26,28 @@ export const proposalResponseSchema = z.object({
   status: z.enum(PROPOSAL_STATUS),
   result: z.enum(PROPOSAL_RESULT),
   electedArbiter: addressSchema.nullable(),
+  // ── Campos derivados (backend-driven, FR-020) ──────────────────────────────
+  // El service los puebla siempre; el frontend los consume sin recalcular.
+  /** true si status === "Active" */
+  active: z.boolean(),
+  /** true si deadline < now (server-time) */
+  expired: z.boolean(),
+  /** true si active && expired: cualquiera puede cerrar la propuesta */
+  canResolve: z.boolean(),
+  /** true si status === "AwaitingArbiter": necesita desempate del arbitro */
+  awaitingArbiter: z.boolean(),
+  /** Label + variante lista para renderizar en el badge de estado */
+  display: displaySchema,
+  /** Hacia donde se inclina la balanza segun los votos actuales */
+  lead: z.enum(["none", "for", "against", "tie"]),
+  /** Si con los votos actuales aprobaría (forPct >= thresholdPct && quorumReached) */
+  passing: z.boolean(),
+  /** Poder de voto que falta para alcanzar quorum ("0" si ya alcanzado) */
+  quorumRemainingWei: weiStringSchema,
+  /** Capabilities del viewer para esta propuesta */
+  viewer: z.object({
+    canBreakTie: capabilitySchema,
+  }),
 });
 export type ProposalResponse = z.infer<typeof proposalResponseSchema>;
 
@@ -35,6 +57,8 @@ export const votingPowerResponseSchema = z.object({
   snapshotBlock: z.string(),
   votingPower: weiStringSchema,
   hasVoted: z.boolean(),
+  /** true si esta wallet puede emitir su voto: tiene poder, no voto y la propuesta sigue activa */
+  canVote: z.boolean(),
 });
 export type VotingPowerResponse = z.infer<typeof votingPowerResponseSchema>;
 
@@ -43,5 +67,7 @@ export const arbiterResponseSchema = z.object({
   currentArbiter: addressSchema.nullable(),
   // Hay una eleccion de arbitro activa o esperando resolucion (vacancia/re-eleccion).
   electionInProgress: z.boolean(),
+  /** true si hay que llamar openArbiterElection(): Building, sin arbitro y sin eleccion en curso */
+  needsOpening: z.boolean(),
 });
 export type ArbiterResponse = z.infer<typeof arbiterResponseSchema>;

@@ -21,6 +21,7 @@ import type {
   OfferStatusValue,
   ProjectStatusValue,
 } from "@shared/constants/enums";
+import type { Display } from "@shared/schemas/common.schema";
 
 type Variant =
   | "default"
@@ -32,20 +33,8 @@ type Variant =
   | "brand"
   | "info";
 
-const PROJECT_LABEL: Record<ProjectStatusValue, string> = {
-  Funding: "En fondeo",
-  Building: "En construcción",
-  Selling: "En venta",
-  Completed: "Completado",
-  Cancelled: "Cancelado",
-};
-const PROJECT_VARIANT: Record<ProjectStatusValue, Variant> = {
-  Funding: "warning",
-  Building: "info",
-  Selling: "brand",
-  Completed: "success",
-  Cancelled: "destructive",
-};
+// El label y la variante los decide el backend (viajan en `display`); el icono es puro design
+// system y se queda en el front, mapeado por status.
 const PROJECT_ICON: Record<ProjectStatusValue, LucideIcon> = {
   Funding: Coins,
   Building: HardHat,
@@ -56,34 +45,25 @@ const PROJECT_ICON: Record<ProjectStatusValue, LucideIcon> = {
 
 export function ProjectStatusBadge({
   status,
+  display,
   className,
 }: {
   status: ProjectStatusValue;
+  display: Display;
   className?: string;
 }) {
   const Icon = PROJECT_ICON[status];
   return (
-    <Badge variant={PROJECT_VARIANT[status]} className={className}>
+    <Badge variant={display.variant} className={className}>
       <Icon />
-      {PROJECT_LABEL[status]}
+      {display.label}
     </Badge>
   );
 }
 
-const MILESTONE_LABEL: Record<MilestoneStatusValue, string> = {
-  Pending: "Pendiente",
-  Declared: "Declarado",
-  Voting: "En votación",
-  Approved: "Aprobado",
-  Rejected: "Rechazado",
-};
-const MILESTONE_VARIANT: Record<MilestoneStatusValue, Variant> = {
-  Pending: "outline",
-  Declared: "secondary",
-  Voting: "warning",
-  Approved: "success",
-  Rejected: "destructive",
-};
+// El icono es puro design system y se queda en el front, mapeado por status. Las flags
+// derivadas (votingExpired/retryExpired/pausedForFunds) solo eligen un icono especial; el label
+// y la variante SIEMPRE vienen del backend en `display`.
 const MILESTONE_ICON: Record<MilestoneStatusValue, LucideIcon> = {
   Pending: Clock,
   Declared: Hourglass,
@@ -94,65 +74,39 @@ const MILESTONE_ICON: Record<MilestoneStatusValue, LucideIcon> = {
 
 export function MilestoneStatusBadge({
   status,
-  expired = false,
+  display,
+  votingExpired = false,
   pausedForFunds = false,
   retryExpired = false,
 }: {
   status: MilestoneStatusValue;
+  /** Label + variante listos para pintar (los decide el backend, el front no los calcula). */
+  display: Display;
   /** La votacion ya vencio pero todavia no se resolvio on-chain (sigue en estado Voting). */
-  expired?: boolean;
+  votingExpired?: boolean;
   /** Declarado pero la votacion no abrio: faltan fondos para financiar el hito (pausa indefinida). */
   pausedForFunds?: boolean;
   /** Hito rechazado en ventana de reintento (Pending + retryCount>0) cuyo plazo de 2 min ya paso. */
   retryExpired?: boolean;
 }) {
-  if (status === "Voting" && expired) {
-    return (
-      <Badge variant="destructive">
-        <Clock />
-        Votación vencida
-      </Badge>
-    );
-  }
-  if (status === "Pending" && retryExpired) {
-    return (
-      <Badge variant="destructive">
-        <RotateCcw />
-        Reintento vencido
-      </Badge>
-    );
-  }
-  if (status === "Declared" && pausedForFunds) {
-    return (
-      <Badge variant="warning">
-        <PauseCircle />
-        Declarado · sin fondos
-      </Badge>
-    );
-  }
-  const Icon = MILESTONE_ICON[status];
+  // Icono especial por caso derivado; si no aplica, el icono base del status.
+  const Icon = votingExpired
+    ? Clock
+    : retryExpired
+      ? RotateCcw
+      : pausedForFunds
+        ? PauseCircle
+        : MILESTONE_ICON[status];
   return (
-    <Badge variant={MILESTONE_VARIANT[status]}>
+    <Badge variant={display.variant}>
       <Icon />
-      {MILESTONE_LABEL[status]}
+      {display.label}
     </Badge>
   );
 }
 
-const OFFER_LABEL: Record<OfferStatusValue, string> = {
-  Voting: "En votación",
-  Approved: "Aprobada",
-  Rejected: "Rechazada",
-  Refunded: "Reembolsada",
-  Executed: "Ejecutada",
-};
-const OFFER_VARIANT: Record<OfferStatusValue, Variant> = {
-  Voting: "warning",
-  Approved: "success",
-  Rejected: "destructive",
-  Refunded: "secondary",
-  Executed: "brand",
-};
+// Icono puro de design system, mapeado por status. El label y variante vienen del backend en
+// `display`; el front nunca los calcula.
 const OFFER_ICON: Record<OfferStatusValue, LucideIcon> = {
   Voting: Vote,
   Approved: ThumbsUp,
@@ -161,12 +115,18 @@ const OFFER_ICON: Record<OfferStatusValue, LucideIcon> = {
   Executed: CheckCircle2,
 };
 
-export function OfferStatusBadge({ status }: { status: OfferStatusValue }) {
+export function OfferStatusBadge({
+  status,
+  display,
+}: {
+  status: OfferStatusValue;
+  display: Display;
+}) {
   const Icon = OFFER_ICON[status];
   return (
-    <Badge variant={OFFER_VARIANT[status]}>
+    <Badge variant={display.variant}>
       <Icon />
-      {OFFER_LABEL[status]}
+      {display.label}
     </Badge>
   );
 }

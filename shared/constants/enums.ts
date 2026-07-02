@@ -49,3 +49,30 @@ export type CertificateTypeValue = (typeof CERTIFICATE_TYPE)[number];
 
 export const CLAIM_TYPE = ["Refund", "Distribution"] as const;
 export type ClaimTypeValue = (typeof CLAIM_TYPE)[number];
+
+// Variantes semanticas de badge que el backend embebe en los DTOs (label + variant).
+// Valores de shape que ambos lados nombran igual: el server elige la variante, el
+// client la mapea a color/icono. SIN logica de negocio (ver constitution Principio II/III).
+export const DISPLAY_VARIANT = [
+  "default",
+  "secondary",
+  "destructive",
+  "outline",
+  "success",
+  "warning",
+  "brand",
+  "info",
+] as const;
+export type DisplayVariant = (typeof DISPLAY_VARIANT)[number];
+
+// Rol del viewer (la wallet que consulta) frente a un proyecto. Es un valor de shape que
+// el backend deriva y ambos lados nombran igual; NO es un rol on-chain con permisos (la
+// seguridad real vive en los contratos, ver constitution Principio II/III).
+export const VIEWER_ROLE = [
+  "developer",
+  "arbiter",
+  "investor",
+  "buyer",
+  "anonymous",
+] as const;
+export type ViewerRoleValue = (typeof VIEWER_ROLE)[number];

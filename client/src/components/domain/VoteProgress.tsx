@@ -21,15 +21,7 @@ function pct(part: bigint, whole: bigint): number {
   return Number((part * 10000n) / whole) / 100;
 }
 
-export function VoteProgress({
-  proposal,
-  active,
-  expired,
-}: {
-  proposal: ProposalResponse;
-  active: boolean;
-  expired: boolean;
-}) {
+export function VoteProgress({ proposal }: { proposal: ProposalResponse }) {
   const countdown = useCountdown(proposal.deadline);
 
   const votesFor = bn(proposal.votesFor);
@@ -43,19 +35,9 @@ export function VoteProgress({
 
   const participationPct = pct(voted, totalPower); // del poder total al snapshot
   const quorumPct = proposal.quorumBps / 100;
-  const quorumTarget = (totalPower * BigInt(proposal.quorumBps)) / 10000n;
-  const quorumRemaining = quorumTarget > voted ? quorumTarget - voted : 0n;
 
-  // Hacia donde se inclina la balanza (solo informativo mientras transcurre).
-  const lead =
-    voted === 0n
-      ? "none"
-      : votesFor > votesAgainst
-        ? "for"
-        : votesAgainst > votesFor
-          ? "against"
-          : "tie";
-  const passing = forPct >= thresholdPct && proposal.quorumReached;
+  // lead, passing y quorumRemainingWei vienen pre-calculados del backend (FR-020).
+  const { active, expired, lead, passing, quorumRemainingWei } = proposal;
 
   return (
     <div className="space-y-4">
@@ -143,7 +125,7 @@ export function VoteProgress({
             </span>
           ) : (
             <span className="text-[var(--fen-muted)]">
-              Faltan {formatWei(quorumRemaining.toString())}
+              Faltan {formatWei(quorumRemainingWei)}
             </span>
           )}
         </div>

@@ -13,12 +13,13 @@ export function useDevelopersList(filters: DeveloperListFilters) {
   });
 }
 
-export function useDeveloper(wallet: string | undefined) {
+export function useDeveloper(wallet: string | undefined, poll = false) {
   return useQuery({
     queryKey: ["developer", wallet],
     queryFn: () => getDeveloper(wallet as string),
     enabled: !!wallet,
     retry: false,
+    ...(poll ? { refetchInterval: 3000 } : {}),
   });
 }
 

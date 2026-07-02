@@ -16,10 +16,19 @@ import { useWallet } from "@/providers/WalletProvider";
 import { useWrite } from "@/hooks/useWrite";
 import { investInProject } from "@/lib/chain/contracts";
 import { ethToWei } from "@/lib/format";
+import type { Capability } from "@shared/schemas/common.schema";
 
 // Invertir SepoliaETH en un proyecto en Funding. Firma directa contra el contrato
-// (invest() payable). La validacion es solo de formato; el contrato valida el resto.
-export function InvestDialog({ projectAddress }: { projectAddress: string }) {
+// (invest() payable). Si permitir invertir lo decide el backend via `invest` (capability del
+// viewer); el front no reimplementa la regla. La validacion propia es solo de formato del monto,
+// y el contrato valida el resto al firmar.
+export function InvestDialog({
+  projectAddress,
+  invest,
+}: {
+  projectAddress: string;
+  invest: Capability;
+}) {
   const { address, isOnSepolia, hasWallet, connect, switchNetwork } = useWallet();
   const { phase, error, run, reset } = useWrite([["project", projectAddress], ["investments", address]]);
   const [open, setOpen] = useState(false);
@@ -75,6 +84,12 @@ export function InvestDialog({ projectAddress }: { projectAddress: string }) {
           <Button variant="destructive" onClick={() => void switchNetwork()}>
             Cambiar a Sepolia
           </Button>
+        ) : !invest.allowed ? (
+          // Wallet lista pero el backend no habilita invertir (ronda cerrada, es el developer,
+          // etc.): mostramos el motivo que resolvio el backend, sin reimplementar la regla.
+          <p className="text-sm text-muted-foreground">
+            {invest.reason ?? "No podés invertir en este proyecto ahora."}
+          </p>
         ) : (
           <div className="space-y-3">
             <div className="space-y-1.5">
@@ -94,7 +109,7 @@ export function InvestDialog({ projectAddress }: { projectAddress: string }) {
         )}
 
         <DialogFooter>
-          {address && isOnSepolia && (
+          {address && isOnSepolia && invest.allowed && (
             <Button onClick={() => void onSubmit()} disabled={busy || !amount}>
               {busy ? "Procesando…" : "Confirmar inversión"}
             </Button>

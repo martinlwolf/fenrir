@@ -13,6 +13,8 @@ import { projectContract, tokenContract } from "../models/onchain/provider";
 import { InvestmentRepository, investmentRepository } from "../persistence/repositories/investment.repository";
 import { ProjectRepository, projectRepository } from "../persistence/repositories/project.repository";
 import { SaleOfferRepository, saleOfferRepository } from "../persistence/repositories/saleOffer.repository";
+import { offerViewerFields } from "../policy/SalePolicy";
+import { buildViewer } from "../policy/Viewer";
 
 // Strategy de reclamo: como cada (estado, tipo) de proyecto define de que pool se
 // reclama y de que tipo es el reclamo. Reemplaza el if/else por (status, projectType)
@@ -43,9 +45,28 @@ export class SaleService {
     private readonly investments: InvestmentRepository = investmentRepository,
   ) { }
 
-  async listOffers(projectAddress: string): Promise<SaleOfferResponse[]> {
+  // Devuelve las ofertas enriquecidas con display, votable y campos del viewer. Necesita el
+  // proyecto para derivar el ViewerContext (rol del consultante) y luego delega en SalePolicy.
+  async listOffers(projectAddress: string, viewerWallet: string | null): Promise<SaleOfferResponse[]> {
+    const project = await this.projects.findByAddress(projectAddress);
+    if (!project) throw new NotFoundException("Project not found");
+
+    const viewer = await buildViewer(
+      {
+        address: project.address,
+        developerWallet: project.developerWallet,
+        currentArbiter: project.currentArbiter,
+        status: project.status,
+      },
+      viewerWallet,
+      { investments: this.investments },
+    );
+
     const offers = await this.offers.listByProject(projectAddress);
-    return offers.map((o) => o.toResponse());
+    return offers.map((o) => {
+      const base = o.toResponse();
+      return { ...base, ...offerViewerFields({ status: base.status, proposalId: base.proposalId }, viewer) };
+    });
   }
 
   async getDistribution(projectAddress: string): Promise<DistributionResponse> {

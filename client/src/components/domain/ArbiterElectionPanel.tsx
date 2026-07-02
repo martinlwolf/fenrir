@@ -15,7 +15,7 @@ import { useWallet } from "@/providers/WalletProvider";
 import { useWrite } from "@/hooks/useWrite";
 import { useProjectInvestors } from "@/hooks/useProjectInvestors";
 import { castElectionVote, resolve } from "@/lib/chain/contracts";
-import { isPast, shortAddress, timeRemaining } from "@/lib/format";
+import { shortAddress, timeRemaining } from "@/lib/format";
 import type { ProposalResponse } from "@shared/schemas/proposal.schema";
 
 const ADDRESS_RE = /^0x[a-fA-F0-9]{40}$/;
@@ -43,9 +43,9 @@ export function ArbiterElectionPanel({
   // "confirmado"; el polling de useProposals termina de actualizar el estado.
   const [justResolved, setJustResolved] = useState(false);
   const busy = phase === "signing" || phase === "mining" || phase === "propagating";
-  const active = proposal.status === "Active";
-  const expired = isPast(proposal.deadline);
-  const canResolve = active && expired && !justResolved;
+  // active/expired vienen del backend (FR-020): no se recalculan.
+  // canResolve combina el flag del backend con justResolved para cubrir el lag D4.
+  const canResolve = proposal.canResolve && !justResolved;
   const candidates = investors.data ?? [];
   const hasCandidates = candidates.length > 0;
 
@@ -64,8 +64,8 @@ export function ArbiterElectionPanel({
         <CardTitle className="text-base">Elección de árbitro</CardTitle>
       </CardHeader>
       <CardContent className="space-y-2">
-        {active &&
-          (expired ? (
+        {proposal.active &&
+          (proposal.expired ? (
             <p className="text-sm font-medium text-destructive">Votación vencida</p>
           ) : (
             <p className="text-sm text-muted-foreground">
@@ -75,7 +75,7 @@ export function ArbiterElectionPanel({
         {proposal.electedArbiter && (
           <p className="text-sm">Árbitro electo: {proposal.electedArbiter}</p>
         )}
-        {active && address && isOnSepolia && (
+        {proposal.active && address && isOnSepolia && (
           <div className="space-y-2">
             <Label htmlFor="candidate">Candidato (inversor del proyecto)</Label>
             {hasCandidates ? (
@@ -127,7 +127,7 @@ export function ArbiterElectionPanel({
             {busy ? "Procesando…" : "Finalizar elección"}
           </Button>
         )}
-        {active && expired && justResolved && (
+        {proposal.active && proposal.expired && justResolved && (
           <p className="text-xs text-muted-foreground">Elección cerrada. Actualizando el estado…</p>
         )}
         <TxFeedback phase={phase} error={error} />

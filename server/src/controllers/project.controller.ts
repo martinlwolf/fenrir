@@ -11,22 +11,22 @@ export class ProjectController {
 
   list = async (req: Request, res: Response): Promise<void> => {
     const query = projectListQuerySchema.parse(req.query);
-    res.json(await this.projects.list(query));
+    res.json(await this.projects.list(query, req.viewerWallet ?? null));
   };
 
   buyerView = async (req: Request, res: Response): Promise<void> => {
     const { page, pageSize } = paginationQuerySchema.parse(req.query);
-    res.json(await this.projects.listBuyerView(page, pageSize));
+    res.json(await this.projects.listBuyerView(page, pageSize, req.viewerWallet ?? null));
   };
 
   detail = async (req: Request, res: Response): Promise<void> => {
     const { address } = addressParamSchema.parse(req.params);
-    res.json(await this.projects.getDetail(address));
+    res.json(await this.projects.getDetail(address, req.viewerWallet ?? null));
   };
 
   milestones = async (req: Request, res: Response): Promise<void> => {
     const { address } = addressParamSchema.parse(req.params);
-    res.json(await this.projects.getMilestones(address));
+    res.json(await this.projects.getMilestones(address, req.viewerWallet ?? null));
   };
 
   investors = async (req: Request, res: Response): Promise<void> => {

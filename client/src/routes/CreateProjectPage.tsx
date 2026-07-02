@@ -14,7 +14,7 @@ import {
 import { TxFeedback } from "@/components/domain/TxFeedback";
 import { useWallet } from "@/providers/WalletProvider";
 import { useWrite } from "@/hooks/useWrite";
-import { useOnchainDeveloper } from "@/hooks/useOnchainDeveloper";
+import { useDeveloper } from "@/hooks/useDeveloper";
 import { createProject } from "@/lib/chain/contracts";
 import { ethToWei } from "@/lib/format";
 import {
@@ -40,11 +40,10 @@ export function CreateProjectPage() {
   const navigate = useNavigate();
   const { address, isOnSepolia, connect, switchNetwork, hasWallet } = useWallet();
 
-  // Registro leído DIRECTO del factory on-chain: es lo que valida createProject. Si lo
-  // sacáramos del backend espejo, tras un redeploy del factory diría "registrado" y la
-  // creación revertiría con "developer not registered".
-  const { data: onchainDev, isLoading: devLoading } = useOnchainDeveloper(address);
-  const isRegistered = !!onchainDev?.registered;
+  // Registro leído del backend: 404 si no existe → isError=true, data=undefined → no registrado.
+  const developer = useDeveloper(address ?? undefined);
+  const isRegistered = !developer.isLoading && !!developer.data;
+  const devLoading = developer.isLoading;
 
   const create = useWrite();
   const [tokenName, setTokenName] = useState("");

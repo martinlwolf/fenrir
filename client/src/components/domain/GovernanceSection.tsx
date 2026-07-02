@@ -1,19 +1,15 @@
 import { useProposals } from "@/hooks/useProposals";
-import { useArbiter } from "@/hooks/useArbiter";
-import { useWallet } from "@/providers/WalletProvider";
 import { VotePanel } from "./VotePanel";
 import { ArbiterElectionPanel } from "./ArbiterElectionPanel";
 import { OpenArbiterElectionPanel } from "./OpenArbiterElectionPanel";
 import { LoadingState, EmptyState, ErrorState } from "./states";
-import { sameAddress } from "@/lib/format";
 import type { ProjectDetailResponse } from "@shared/schemas/project.schema";
 
 // Lista las propuestas del proyecto y renderiza el panel adecuado segun el kind.
+// El rol de árbitro lo determina el backend (proposal.viewer.canBreakTie.allowed);
+// no se calcula aquí.
 export function GovernanceSection({ project }: { project: ProjectDetailResponse }) {
   const { data, isLoading, isError, refetch } = useProposals(project.address);
-  const { address } = useWallet();
-  const arbiter = useArbiter(project.address);
-  const isArbiter = sameAddress(arbiter.data?.currentArbiter, address);
 
   // Botón para abrir la elección de árbitro (lee on-chain). Se muestra arriba de todo y aparece
   // aunque todavía no haya propuestas espejadas en el backend.
@@ -54,7 +50,6 @@ export function GovernanceSection({ project }: { project: ProjectDetailResponse 
                 ? project.milestones.find((m) => m.milestoneIndex === proposal.refId)?.description
                 : undefined
             }
-            isArbiter={isArbiter}
           />
         ),
         )}

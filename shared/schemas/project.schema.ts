@@ -4,9 +4,16 @@ import {
   MILESTONE_STATUS,
   PROJECT_STATUS,
   PROJECT_TYPE,
+  VIEWER_ROLE,
   VOTING_MODE,
 } from "../constants/enums";
-import { addressSchema, paginationQuerySchema, weiStringSchema } from "./common.schema";
+import {
+  addressSchema,
+  capabilitySchema,
+  displaySchema,
+  paginationQuerySchema,
+  weiStringSchema,
+} from "./common.schema";
 
 // Query del catalogo: filtros opcionales por tipo, estado y developer + paginacion.
 export const projectListQuerySchema = paginationQuerySchema.extend({
@@ -34,8 +41,48 @@ export const milestoneResponseSchema = z.object({
   reportHash: z.string().nullable(),
   reportUrl: z.string().nullable(),
   proposalId: z.number().int().nullable(),
+  // Estados derivados del hito (FR-020: los calcula el backend sobre el espejo, sin columnas
+  // nuevas). Espejan la logica que antes vivia en client/.../MilestoneList.tsx. Siempre poblados.
+  // Etiqueta lista para renderizar (label + variante); el front solo pinta.
+  display: displaySchema,
+  // Declarado pero la votacion no abrio: totalRaised < presupuesto acumulado hasta este hito.
+  pausedForFunds: z.boolean(),
+  // Plazo de votacion vencido pero la propuesta sigue Active (aun sin resolver on-chain).
+  votingExpired: z.boolean(),
+  // Rechazado en ventana de reintento cuyo plazo (2 min) ya paso.
+  retryExpired: z.boolean(),
+  // Estructural (sin considerar quien consulta): el hito esta en condiciones de declararse.
+  declarable: z.boolean(),
+  // Presupuesto acumulado hasta este hito inclusive (suma de budgets con indice <=).
+  cumulativeBudget: weiStringSchema,
+  // Cuanto falta recaudar para abrir la votacion de este hito ("0" si no aplica).
+  fundsShortfall: weiStringSchema,
+  // Capabilities del viewer sobre el hito: el backend decide, el front habilita/deshabilita.
+  viewer: z.object({ canDeclare: capabilitySchema }),
 });
 export type MilestoneResponse = z.infer<typeof milestoneResponseSchema>;
+
+// Permisos del viewer para las acciones a nivel proyecto. El backend decide `allowed` +
+// `reason`; el frontend solo habilita/deshabilita la UI (nunca reimplementa la regla).
+export const projectCapabilitiesSchema = z.object({
+  invest: capabilitySchema,
+  claimCommission: capabilitySchema,
+  // Si se puede llamar executeSale(): proyecto en Selling con al menos una oferta Approved.
+  canExecuteSale: capabilitySchema,
+});
+export type ProjectCapabilities = z.infer<typeof projectCapabilitiesSchema>;
+
+// Contexto del viewer (la wallet que consulta) frente al proyecto: su rol derivado, las
+// relaciones que mantiene y sus capabilities. Viaja embebido por wallet en cada DTO de
+// proyecto; deriva del espejo (FR-020), no otorga permisos on-chain.
+export const projectViewerSchema = z.object({
+  role: z.enum(VIEWER_ROLE),
+  isDeveloper: z.boolean(),
+  isArbiter: z.boolean(),
+  isInvestor: z.boolean(),
+  capabilities: projectCapabilitiesSchema,
+});
+export type ProjectViewer = z.infer<typeof projectViewerSchema>;
 
 export const projectResponseSchema = z.object({
   address: addressSchema,
@@ -63,11 +110,30 @@ export const projectResponseSchema = z.object({
   penaltyAccumulatedBps: z.number().int(),
   currentArbiter: addressSchema.nullable(),
   currentMilestoneIndex: z.number().int(),
+  // Estado de fondeo derivado (no columnas nuevas; el backend lo calcula, FR-020).
+  // Porcentaje recaudado sobre el objetivo (FF) en basis points, 0..10000.
+  fundedBps: z.number().int(),
+  // True mientras la ronda de inversion sigue abierta (derivado de status/deadline/montos).
+  fundingOpen: z.boolean(),
+  // Etiqueta de estado lista para renderizar (label + variante); el front solo pinta.
+  display: displaySchema,
+  // Contexto del viewer embebido: se puebla siempre (anonimo si no hay wallet consultante).
+  viewer: projectViewerSchema,
 });
 export type ProjectResponse = z.infer<typeof projectResponseSchema>;
 
 export const projectDetailResponseSchema = projectResponseSchema.extend({
   milestones: z.array(milestoneResponseSchema),
+  // Estado de mantenimiento derivado (casos borde que destraban el proyecto). Espeja la
+  // logica de client/.../MaintenancePanel.tsx. Solo en el detalle (la lista no lo lleva).
+  maintenance: z.object({
+    // Fondeo vencido sin alcanzar el FMPA: cancelable para habilitar reembolso total.
+    fundingExpired: z.boolean(),
+    // Hito vigente estancado (vencido sin (re)declarar, o declarado sin fondos para votar).
+    stalled: z.object({ active: z.boolean(), reason: z.string().nullable() }),
+    // Capability del viewer para cancelar el proyecto estancado (solo inversor con FDT).
+    canCancelStalled: capabilitySchema,
+  }),
 });
 export type ProjectDetailResponse = z.infer<typeof projectDetailResponseSchema>;
 

@@ -2,32 +2,19 @@ import { Link } from "react-router-dom";
 import { CheckCircle2, Coins, MapPin, Users, Wallet } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { ProjectStatusBadge } from "./StatusBadge";
-import { useWallet } from "@/providers/WalletProvider";
-import { useInvestments } from "@/hooks/useInvestments";
 import { buildingImage } from "@/lib/buildings";
-import { formatWei, isPast, sameAddress, shortAddress } from "@/lib/format";
+import { formatWei, shortAddress } from "@/lib/format";
 import type { ProjectResponse } from "@shared/schemas/project.schema";
 
 const TYPE_LABEL = { Investment: "Inversión", Civic: "Cívico" } as const;
-
-// Porcentaje recaudado sobre el objetivo (FF). Tolera ff=0 (evita NaN/Infinity).
-function fundedPct(totalRaised: string, ff: string): number {
-  try {
-    const r = Number(BigInt(totalRaised));
-    const goal = Number(BigInt(ff));
-    if (goal <= 0) return 0;
-    return Math.min(100, Math.round((r / goal) * 100));
-  } catch {
-    return 0;
-  }
-}
 
 export function ProjectCard({ project }: { project: ProjectResponse }) {
   // El nombre del token (FDT) es el identificador legible del proyecto; si todavia no se
   // espejo desde on-chain, se cae a la direccion abreviada.
   const title = project.tokenName ?? shortAddress(project.address);
   const membership = useMembership(project);
-  const pct = fundedPct(project.totalRaised, project.ff);
+  // Porcentaje de fondeo: lo calcula el backend (fundedBps, 0..10000). El front solo lo pinta.
+  const pct = Math.round(project.fundedBps / 100);
   const image = buildingImage(project.address, project.projectType);
   const civic = project.projectType === "Civic";
 
@@ -52,7 +39,7 @@ export function ProjectCard({ project }: { project: ProjectResponse }) {
             </span>
           </div>
           <div className="absolute right-3 top-3">
-            <ProjectStatusBadge status={project.status} />
+            <ProjectStatusBadge status={project.status} display={project.display} />
           </div>
 
           <div className="absolute inset-x-3 bottom-3">
@@ -132,43 +119,29 @@ export function ProjectCard({ project }: { project: ProjectResponse }) {
   );
 }
 
-// Relacion declarativa de la wallet conectada con el proyecto: si ya invirtio, si puede
-// invertir (fondeo abierto) o si tiene que conectar la wallet. useInvestments comparte una
-// sola query por wallet (react-query la dedupea), aunque se llame en cada card.
+// Relacion declarativa de la wallet conectada con el proyecto, derivada 100% del DTO del
+// backend (project.viewer + project.fundingOpen). El front no calcula reglas: solo elige el
+// icono/color del design system para lo que el backend ya resolvio.
 function useMembership(project: ProjectResponse) {
-  const { address } = useWallet();
-  const investments = useInvestments(address);
+  const { viewer, fundingOpen } = project;
 
-  // Mientras carga la lista de inversiones evitamos el parpadeo "Podés invertir" -> "Ya estás
-  // invirtiendo" no mostrando nada hasta saber con certeza.
-  if (address && investments.isLoading) return null;
-
-  const invested =
-    !!address &&
-    (investments.data ?? []).some((inv) => sameAddress(inv.projectAddress, project.address));
-  // La ronda sigue abierta entre el FMPA y el FF: alcanzar el FMPA pasa el proyecto a Building
-  // pero NO cierra la ronda (business_rules/fondeo-y-comision.md). Antes del FMPA (Funding) corre
-  // el TTL de fondeo; ya en Building se invierte hasta llegar al FF (totalRaised >= ff).
-  const fundingOpen =
-    BigInt(project.totalRaised) < BigInt(project.ff) &&
-    (project.status === "Building" ||
-      (project.status === "Funding" && !isPast(project.fundingDeadline)));
-
-  if (invested) {
+  if (viewer.isInvestor) {
     return {
       label: fundingOpen ? "Ya estás invirtiendo" : "Sos inversor",
       color: "var(--fen-accent-strong)",
       Icon: CheckCircle2,
     } as const;
   }
-  if (fundingOpen) {
-    return address
-      ? { label: "Podés invertir", color: "var(--fen-accent-strong)", Icon: Coins } as const
-      : {
-          label: "Conectá tu wallet para invertir",
-          color: "var(--fen-muted)",
-          Icon: Wallet,
-        } as const;
+  if (viewer.capabilities.invest.allowed) {
+    return { label: "Podés invertir", color: "var(--fen-accent-strong)", Icon: Coins } as const;
   }
+  if (fundingOpen && viewer.role === "anonymous") {
+    return {
+      label: "Conectá tu wallet para invertir",
+      color: "var(--fen-muted)",
+      Icon: Wallet,
+    } as const;
+  }
+  // p.ej. developer viendo su propio proyecto, o ronda de fondeo cerrada.
   return null;
 }
