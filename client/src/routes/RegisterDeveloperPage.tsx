@@ -188,6 +188,7 @@ function DeveloperValuePanel() {
           <img
             src="/buildings/inv-06.jpg"
             alt="Edificio en desarrollo"
+            loading="lazy"
             className="size-full object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-[var(--fen-ink)]/85 to-transparent" />
