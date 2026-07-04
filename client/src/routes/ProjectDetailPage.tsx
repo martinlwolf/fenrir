@@ -3,6 +3,7 @@ import { ArrowLeft } from "lucide-react";
 import { useProject } from "@/hooks/useProject";
 import { FundingSummary } from "@/components/domain/FundingSummary";
 import { MilestoneList } from "@/components/domain/MilestoneList";
+import { BuildingProgress } from "@/components/domain/BuildingProgress";
 import { InvestDialog } from "@/components/domain/InvestDialog";
 import { GovernanceSection } from "@/components/domain/GovernanceSection";
 import { DeveloperInfoCard } from "@/components/domain/DeveloperInfoCard";
@@ -89,6 +90,9 @@ export function ProjectDetailPage() {
           {saleTabAvailable && <TabsTrigger value="sale">Venta</TabsTrigger>}
         </TabsList>
         <TabsContent value="summary">
+          <div className="mb-6">
+            <BuildingProgress milestones={project.milestones} />
+          </div>
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
             <div className="space-y-6 lg:col-span-1">
               <FundingSummary project={project} />

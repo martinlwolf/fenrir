@@ -14,6 +14,7 @@ import { MarketplacePage } from "@/routes/MarketplacePage";
 import { CreateProjectPage } from "@/routes/CreateProjectPage";
 import { RegisterDeveloperPage } from "@/routes/RegisterDeveloperPage";
 import { LandingPage } from "@/routes/LandingPage";
+import { BuildingPlaygroundPage } from "@/routes/dev/BuildingPlaygroundPage";
 
 // Layout de la app: header global + footer comun en todas las vistas. El home (/) es una
 // landing full-bleed: su hero ocupa todo el ancho y el header va transparente encima; el resto
@@ -65,6 +66,11 @@ export function App() {
           <Route path="/developers/:wallet" element={<DeveloperProfilePage />} />
           <Route path="/marketplace" element={<MarketplacePage />} />
           <Route path="/create" element={<CreateProjectPage />} />
+          {/* Solo en DEV: playground para ensayar la animacion de BuildingProgress sin
+              Sepolia ni mock server. No se linkea desde ningun nav. */}
+          {import.meta.env.DEV && (
+            <Route path="/dev/building" element={<BuildingPlaygroundPage />} />
+          )}
         </Route>
       </Routes>
     </>
