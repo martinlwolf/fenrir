@@ -8,6 +8,7 @@ import type { MilestoneResponse } from "@shared/schemas/project.schema";
 import type { ProjectDetailResponse } from "@shared/schemas/project.schema";
 import type { MilestoneStatusValue, ProjectStatusValue } from "@shared/constants/enums";
 import type { ReportResponse, ReportVerification } from "@shared/schemas/report.schema";
+import { BRIGOS_PALERMO_ADDRESS } from "./tourProjects";
 
 const ETH = (n: number) => (BigInt(Math.round(n * 1000)) * 10n ** 15n).toString();
 const DAY = 86400000;
@@ -199,7 +200,78 @@ type MockProjectBase = Omit<
   "fundedBps" | "fundingOpen" | "display" | "viewer" | "maintenance" | "milestones"
 > & { milestones: MockMilestoneBase[] };
 
+// Brigos Palermo (demo del recorrido virtual): 14 hitos = 14 niveles (PB + 1° a 13°), uno por piso.
+// El milestoneIndex coincide con el piso en tourProjects.ts (0 = PB ... 13 = 13°). Casi todo
+// aprobado y los ultimos en curso, para mostrar el edificio completo con su avance de obra.
+const BRIGOS_FLOORS: { label: string; status: MilestoneStatusValue }[] = [
+  { label: "planta baja", status: "Approved" },
+  { label: "1.° piso", status: "Approved" },
+  { label: "2.° piso", status: "Approved" },
+  { label: "3.° piso", status: "Approved" },
+  { label: "4.° piso", status: "Approved" },
+  { label: "5.° piso", status: "Approved" },
+  { label: "6.° piso", status: "Approved" },
+  { label: "7.° piso", status: "Approved" },
+  { label: "8.° piso", status: "Approved" },
+  { label: "9.° piso", status: "Approved" },
+  { label: "10.° piso", status: "Approved" },
+  { label: "11.° piso", status: "Approved" },
+  { label: "12.° piso", status: "Voting" },
+  { label: "13.° piso", status: "Declared" },
+];
+
+const brigosMilestones: MockMilestoneBase[] = BRIGOS_FLOORS.map(({ label, status }, i) => {
+  // "Alcanzado" = el developer ya declaro el hito (Declared) o mas alla; recien ahi hay reporte.
+  const reached = status !== "Pending" && status !== "Rejected";
+  const hex = (200 + i).toString(16).padStart(2, "0");
+  return {
+    milestoneIndex: i,
+    description: `Construcción y terminaciones del ${label}.`,
+    budget: ETH(5),
+    durationSeconds: "1209600",
+    deadline:
+      status === "Approved"
+        ? new Date(Date.now() - (BRIGOS_FLOORS.length - i) * DAY).toISOString()
+        : reached
+          ? new Date(Date.now() + 2 * DAY).toISOString()
+          : null,
+    status,
+    retryCount: 0,
+    trancheReleased: status === "Approved",
+    reportHash: reached ? "0x" + hex.repeat(32) : null,
+    reportUrl: reached ? `http://localhost:4000/reports/2${i.toString().padStart(2, "0")}` : null,
+    proposalId: reached ? 200 + i : null,
+  };
+});
+
 const mockProjectsBase: MockProjectBase[] = [
+  // Proyecto DEMO con recorrido virtual propio (fachada + video + una imagen por piso). Su detalle
+  // muestra el tour con los pisos gateados por hito. El address vive en tourProjects.ts para que
+  // proyecto y tour compartan la misma fuente.
+  {
+    address: BRIGOS_PALERMO_ADDRESS,
+    tokenAddress: addr("b13"),
+    tokenName: "Brigos Palermo",
+    tokenSymbol: "BRIG",
+    developerRazonSocial: devName(addr("d6")),
+    investorCount: 34,
+    governorAddress: addr("c13"),
+    developerWallet: addr("d6"),
+    projectType: "Investment",
+    votingMode: "ByToken",
+    status: "Building",
+    fmpa: ETH(20),
+    ff: ETH(70),
+    totalRaised: ETH(70),
+    totalReleasedToDeveloper: ETH(60),
+    estimatedSalePrice: ETH(120),
+    salePrice: null,
+    fundingDeadline: new Date(Date.now() - 10 * DAY).toISOString(),
+    penaltyAccumulatedBps: 0,
+    currentArbiter: addr("e6"),
+    currentMilestoneIndex: 12,
+    milestones: brigosMilestones,
+  },
   {
     address: addr("a1"),
     tokenAddress: addr("b1"),

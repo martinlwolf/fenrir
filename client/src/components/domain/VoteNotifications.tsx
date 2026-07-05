@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { CheckCircle2, Gavel, Vote, XCircle } from "lucide-react";
@@ -36,9 +36,12 @@ export function VoteNotifications() {
   const { data } = useMyProposalsFeed();
   const { address } = useWallet();
   const navigate = useNavigate();
-  const prev = useRef<Map<string, Seen>>(new Map());
-  const openNotified = useRef<Set<string>>(new Set());
+  // Colecciones estables entre renders (via ref): ultimo estado visto y votaciones abiertas ya avisadas.
+  const lastSeen = useRef<Map<string, Seen>>(new Map()).current;
+  const notifiedOpen = useRef<Set<string>>(new Set()).current;
   const arbiterNotified = useRef<Set<string>>(new Set());
+  // Wallet para la que ya se sembro el feed (null = todavia no): evita spamear el historial al cargar.
+  const seededFor = useRef<string | null>(null);
   const initialized = useRef(false);
 
   useEffect(() => {
@@ -47,7 +50,7 @@ export function VoteNotifications() {
 
     // Siembra silenciosa al primer feed de esta wallet: registra lo existente SIN avisar.
     // De ahi en mas, solo lo nuevo dispara toast.
-    if (seededFor !== wallet) {
+    if (seededFor.current !== wallet) {
       notifiedOpen.clear();
       lastSeen.clear();
       for (const { proposal, projectAddress } of data) {
@@ -55,7 +58,8 @@ export function VoteNotifications() {
         lastSeen.set(key, { status: proposal.status, result: proposal.result });
         if (proposal.status === "Active") notifiedOpen.add(key);
       }
-      seededFor = wallet;
+      seededFor.current = wallet;
+      initialized.current = true;
       return;
     }
 
