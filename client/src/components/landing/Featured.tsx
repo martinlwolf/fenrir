@@ -17,7 +17,7 @@ export function Featured() {
             </h2>
           </div>
           <Link
-            to="/"
+            to="/projects"
             className="inline-flex shrink-0 items-center rounded-[10px] border border-[var(--fen-border-strong)] bg-white px-[22px] py-[13px] text-[15px] font-bold text-[var(--fen-ink)] transition-colors hover:bg-[var(--fen-surface-2)]"
           >
             Ver todos →

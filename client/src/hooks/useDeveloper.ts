@@ -1,12 +1,25 @@
 import { useQuery } from "@tanstack/react-query";
-import { getDeveloper, getReputation } from "@/services/developers.service";
+import {
+  getDeveloper,
+  getReputation,
+  listDevelopers,
+  type DeveloperListFilters,
+} from "@/services/developers.service";
 
-export function useDeveloper(wallet: string | undefined) {
+export function useDevelopersList(filters: DeveloperListFilters) {
+  return useQuery({
+    queryKey: ["developers", filters],
+    queryFn: () => listDevelopers(filters),
+  });
+}
+
+export function useDeveloper(wallet: string | undefined, poll = false) {
   return useQuery({
     queryKey: ["developer", wallet],
     queryFn: () => getDeveloper(wallet as string),
     enabled: !!wallet,
     retry: false,
+    ...(poll ? { refetchInterval: 3000 } : {}),
   });
 }
 

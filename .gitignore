@@ -35,3 +35,5 @@ Thumbs.db
 .vscode/
 .idea/
 .mcp.json
+.atl/.skill-registry.cache.json
+.atl/skill-registry.md

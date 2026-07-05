@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useProjects } from "@/hooks/useProjects";
 import { ProjectCard } from "@/components/domain/ProjectCard";
+import { PageHeader } from "@/components/domain/PageHeader";
 import {
   ProjectFilters,
   type ProjectFiltersValue,
@@ -12,16 +13,20 @@ export function CatalogPage() {
   const { data, isLoading, isError, refetch } = useProjects(filters);
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">Proyectos</h1>
-          <p className="text-sm text-muted-foreground">
-            Descubrí proyectos de inversión y obra cívica.
+    <div className="space-y-7">
+      <PageHeader
+        eyebrow="Catálogo"
+        title="Proyectos inmobiliarios"
+        description="Descubrí proyectos de inversión y obra cívica fondeados y auditados on-chain por la comunidad."
+      >
+        {typeof data?.total === "number" && (
+          <p className="hidden text-sm text-[var(--fen-muted)] sm:block">
+            <span className="font-semibold text-[var(--fen-ink)]">{data.total}</span> proyectos
           </p>
-        </div>
-        <ProjectFilters value={filters} onChange={setFilters} />
-      </div>
+        )}
+      </PageHeader>
+
+      <ProjectFilters value={filters} onChange={setFilters} />
 
       {isLoading ? (
         <CardsSkeleton />
@@ -36,9 +41,15 @@ export function CatalogPage() {
           description="Probá quitar los filtros o volvé más tarde."
         />
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {data.items.map((p) => (
-            <ProjectCard key={p.address} project={p} />
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {data.items.map((p, i) => (
+            <div
+              key={p.address}
+              className="animate-fade-up"
+              style={{ animationDelay: `${Math.min(i, 9) * 60}ms` }}
+            >
+              <ProjectCard project={p} />
+            </div>
           ))}
         </div>
       )}

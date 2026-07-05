@@ -3,16 +3,24 @@ import { Router } from "express";
 import { registerReadPath } from "../config/docs/openapi";
 import { governanceController } from "../controllers/governance.controller";
 import { asyncHandler } from "../middlewares/asyncHandler";
+import { resolveViewer } from "../middlewares/resolveViewer";
 
 export const governanceRouter = Router();
 
-governanceRouter.get("/projects/:address/proposals", asyncHandler(governanceController.listProposals));
+// resolveViewer en proposals: el service embebe capabilities del viewer (canBreakTie, etc.).
+// No bloquea: si falta la wallet, deriva como viewer anonimo (capabilities = false).
+governanceRouter.get(
+  "/projects/:address/proposals",
+  resolveViewer,
+  asyncHandler(governanceController.listProposals),
+);
 governanceRouter.get(
   "/projects/:address/proposals/:proposalId/voting-power",
   asyncHandler(governanceController.votingPower),
 );
 governanceRouter.get(
   "/projects/:address/proposals/:proposalId",
+  resolveViewer,
   asyncHandler(governanceController.getProposal),
 );
 governanceRouter.get("/projects/:address/arbiter", asyncHandler(governanceController.arbiter));

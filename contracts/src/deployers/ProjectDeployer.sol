@@ -14,6 +14,7 @@ library ProjectDeployer {
         uint256 fundingDeadline_,
         uint256[] memory milestoneBudgets_,
         uint256[] memory milestoneDurations_,
+        string[] memory milestoneDescriptions_,
         uint256 estimatedSalePrice_
     ) external returns (address) {
         return address(
@@ -27,6 +28,7 @@ library ProjectDeployer {
                 fundingDeadline_,
                 milestoneBudgets_,
                 milestoneDurations_,
+                milestoneDescriptions_,
                 estimatedSalePrice_
             )
         );

@@ -15,6 +15,7 @@ import { z } from "zod";
 export interface ProjectFilters {
   type?: ProjectTypeValue;
   status?: ProjectStatusValue;
+  developer?: string;
   page?: number;
   pageSize?: number;
 }

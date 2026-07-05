@@ -1,11 +1,18 @@
 import { Badge } from "@/components/ui/badge";
 import { ShieldCheck, ShieldX, ShieldQuestion } from "lucide-react";
-import { useReportVerification } from "@/hooks/useReportVerification";
+import { useMilestoneReport } from "@/hooks/useMilestoneReport";
 
 // Muestra el resultado de verificacion de hash que entrega la API (hashMatch). El frontend
-// NO recalcula la huella (FR-009).
-export function ReportVerificationBadge({ reportId }: { reportId: number }) {
-  const { data, isLoading } = useReportVerification(reportId);
+// NO recalcula la huella (FR-009). Se ubica por (proyecto, hito); montar solo cuando el hito
+// ya tiene reporte para evitar 404.
+export function ReportVerificationBadge({
+  address,
+  index,
+}: {
+  address: string;
+  index: number;
+}) {
+  const { data, isLoading } = useMilestoneReport(address, index);
   if (isLoading || !data) return null;
 
   if (data.hashMatch === true) {

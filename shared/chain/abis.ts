@@ -18,7 +18,7 @@ export const FENRIR_FACTORY_ABI: string[] = [
   "function failureCertificate() view returns (address)",
   // writes
   "function registerDeveloper(string razonSocial, string cuit)",
-  "function createProject(string tokenName, string tokenSymbol, uint8 projectType, uint8 votingMode, uint256 fmpa, uint256 ff, uint256 fundingDeadline, uint256[] milestoneBudgets, uint256[] milestoneDurations, uint256 estimatedSalePrice) returns (address projectAddress)",
+  "function createProject(string tokenName, string tokenSymbol, uint8 projectType, uint8 votingMode, uint256 fmpa, uint256 ff, uint256 fundingDeadline, uint256[] milestoneBudgets, uint256[] milestoneDurations, string[] milestoneDescriptions, uint256 estimatedSalePrice) returns (address projectAddress)",
 ];
 
 export const FENRIR_PROJECT_ABI: string[] = [
@@ -62,7 +62,7 @@ export const FENRIR_PROJECT_ABI: string[] = [
   "function distributionPool() view returns (uint256)",
   "function refundPool() view returns (uint256)",
   "function milestonesCount() view returns (uint256)",
-  "function milestones(uint256) view returns (uint256 budget, uint256 deadline, uint8 retryCount, bool trancheReleased, uint8 status, bytes32 reportHash, string reportUrl, uint256 proposalId)",
+  "function milestones(uint256) view returns (uint256 budget, uint256 deadline, uint8 retryCount, bool trancheReleased, uint8 status, bytes32 reportHash, string reportUrl, uint256 proposalId, string description)",
   "function milestoneDurations(uint256) view returns (uint256)",
   "function developer() view returns (address)",
   "function token() view returns (address)",

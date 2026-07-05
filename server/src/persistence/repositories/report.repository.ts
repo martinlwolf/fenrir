@@ -69,6 +69,23 @@ export class ReportRepository {
     return row ? this.toModel(row) : null;
   }
 
+  // Reporte mas reciente con contenido para un (proyecto, hito). Excluye las
+  // declaraciones huerfanas (storageRef vacio), que no tienen contenido que mostrar.
+  async findLatestByProjectMilestone(
+    projectAddress: string,
+    milestoneIndex: number,
+  ): Promise<MilestoneReport | null> {
+    const row = await this.db.milestoneReport.findFirst({
+      where: {
+        projectAddress: projectAddress.toLowerCase(),
+        milestoneIndex,
+        storageRef: { not: "" },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+    return row ? this.toModel(row) : null;
+  }
+
   // Busca el reporte mas reciente para un (proyecto, hito) cuyo hash computado
   // coincide con el hash on-chain -- usado al observar MilestoneDeclared.
   findByProjectMilestoneAndHash(

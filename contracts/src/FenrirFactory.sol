@@ -160,6 +160,7 @@ contract FenrirFactory is IFenrirFactoryCallback {
         uint256 fundingDeadline,
         uint256[] calldata milestoneBudgets,
         uint256[] calldata milestoneDurations,
+        string[] calldata milestoneDescriptions,
         uint256 estimatedSalePrice
     ) external returns (address projectAddress) {
         require(
@@ -184,6 +185,7 @@ contract FenrirFactory is IFenrirFactoryCallback {
             fundingDeadline,
             milestoneBudgets,
             milestoneDurations,
+            milestoneDescriptions,
             estimatedSalePrice
         );
 

@@ -6,7 +6,23 @@ import type {
   ProjectDetailResponse,
   ProjectResponse,
 } from "@shared/schemas/project.schema";
-import type { Milestone } from "./Milestone";
+import type { Milestone, MilestoneResponseBase } from "./Milestone";
+
+// Campos del DTO que NO produce el model: los deriva/compone el ProjectService por wallet
+// consultante (fondeo, display, viewer). El model se mantiene puro (FR-020) y devuelve el
+// resto; el service completa estos antes de responder.
+type ProjectResponseBase = Omit<
+  ProjectResponse,
+  "fundedBps" | "fundingOpen" | "display" | "viewer"
+>;
+// El detalle base tampoco lleva los bloques derivados: los hitos van en su forma base (sin
+// display/estados/capabilities) y el bloque `maintenance` lo compone el service.
+type ProjectDetailResponseBase = Omit<
+  ProjectDetailResponse,
+  "fundedBps" | "fundingOpen" | "display" | "viewer" | "milestones" | "maintenance"
+> & {
+  milestones: MilestoneResponseBase[];
+};
 
 export interface ProjectProps {
   address: string;
@@ -50,7 +66,37 @@ export class Project {
     return this.props.status;
   }
 
-  toResponse(): ProjectResponse {
+  // Getters de lectura para que el service derive fondeo/viewer sin exponer `props` ni
+  // duplicar el shape. No mutan nada: el model sigue siendo puro (FR-020).
+  get developerWallet(): string {
+    return this.props.developerWallet;
+  }
+
+  get currentArbiter(): string | null {
+    return this.props.currentArbiter;
+  }
+
+  get ff(): bigint {
+    return this.props.ff;
+  }
+
+  get totalRaised(): bigint {
+    return this.props.totalRaised;
+  }
+
+  get fundingDeadline(): Date {
+    return this.props.fundingDeadline;
+  }
+
+  get fmpa(): bigint {
+    return this.props.fmpa;
+  }
+
+  get currentMilestoneIndex(): number {
+    return this.props.currentMilestoneIndex;
+  }
+
+  toResponse(): ProjectResponseBase {
     const p = this.props;
     return {
       address: p.address,
@@ -77,7 +123,7 @@ export class Project {
     };
   }
 
-  toDetailResponse(): ProjectDetailResponse {
+  toDetailResponse(): ProjectDetailResponseBase {
     return {
       ...this.toResponse(),
       milestones: this.milestones.map((m) => m.toResponse()),

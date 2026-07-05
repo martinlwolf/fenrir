@@ -2,6 +2,8 @@
 // (certificados de finalizacion/fallido).
 import type { CertificateTypeValue } from "@shared/constants/enums";
 import type {
+  DeveloperListQuery,
+  DeveloperListResponse,
   DeveloperResponse,
   ReputationResponse,
 } from "@shared/schemas/developer.schema";
@@ -21,6 +23,41 @@ export class DeveloperService {
     const developer = await this.developers.findByWallet(wallet);
     if (!developer) throw new NotFoundException("Developer not found");
     return developer.toResponse();
+  }
+
+  // Directorio de developers, ordenable y filtrable por su historico (completados/fallidos).
+  // El filtro/orden/paginado se aplica aca sobre el universo enriquecido por el repositorio;
+  // el conteo de developers de un proyecto de seminario es chico y no amerita SQL dedicado.
+  async listDevelopers(query: DeveloperListQuery): Promise<DeveloperListResponse> {
+    const all = await this.developers.listWithReputation();
+
+    const filtered = all.filter((d) => {
+      if (query.filter === "withCompleted") return d.completed > 0;
+      if (query.filter === "withFailed") return d.failed > 0;
+      return true;
+    });
+
+    const dir = query.order === "asc" ? 1 : -1;
+    filtered.sort((a, b) => {
+      if (query.sort === "razonSocial") {
+        return dir * a.razonSocial.localeCompare(b.razonSocial);
+      }
+      const diff = query.sort === "failed" ? a.failed - b.failed : a.completed - b.completed;
+      // Desempate estable por razon social para un orden determinista.
+      return diff !== 0 ? dir * diff : a.razonSocial.localeCompare(b.razonSocial);
+    });
+
+    const total = filtered.length;
+    const start = (query.page - 1) * query.pageSize;
+    const items = filtered.slice(start, start + query.pageSize).map((d) => ({
+      wallet: d.wallet,
+      razonSocial: d.razonSocial,
+      cuit: d.cuit,
+      completed: d.completed,
+      failed: d.failed,
+    }));
+
+    return { items, total, page: query.page, pageSize: query.pageSize };
   }
 
   async getReputation(wallet: string): Promise<ReputationResponse> {

@@ -32,6 +32,17 @@ export async function getReport(reportId: number | string): Promise<ReportRespon
   return reportResponseSchema.parse(data);
 }
 
+// Reporte mas reciente de un hito, ubicado por (proyecto, indice) en vez de por id: asi la
+// UI no depende del formato de la reportUrl on-chain. Devuelve contenido + CID IPFS +
+// verificacion de hash. 404 si el hito todavia no tiene reporte.
+export async function getMilestoneReport(
+  address: string,
+  milestoneIndex: number,
+): Promise<ReportResponse> {
+  const { data } = await api.get(`/projects/${address}/milestones/${milestoneIndex}/report`);
+  return reportResponseSchema.parse(data);
+}
+
 export async function getReportVerification(
   reportId: number | string,
 ): Promise<ReportVerification> {

@@ -2,6 +2,7 @@
 // formato (la unica permitida en el frontend, constitution Principio II). Nunca
 // reglas de negocio.
 import { z } from "zod";
+import { DISPLAY_VARIANT } from "../constants/enums";
 
 // Direccion EVM (0x + 40 hex). Se normaliza a lowercase para consistencia del espejo.
 export const addressSchema = z
@@ -25,3 +26,19 @@ export const paginationQuerySchema = z.object({
 });
 
 export type PaginationQuery = z.infer<typeof paginationQuerySchema>;
+
+// Etiqueta de estado lista para renderizar: el backend elige texto + variante y el
+// frontend solo pinta. Es el shape del "display" que viaja embebido en los DTOs.
+export const displaySchema = z.object({
+  label: z.string(),
+  variant: z.enum(DISPLAY_VARIANT),
+});
+export type Display = z.infer<typeof displaySchema>;
+
+// Permiso de una accion para el viewer que consulta: `allowed` mas un `reason` opcional
+// (por que no se puede). El backend decide; el frontend solo habilita/deshabilita la UI.
+export const capabilitySchema = z.object({
+  allowed: z.boolean(),
+  reason: z.string().optional(),
+});
+export type Capability = z.infer<typeof capabilitySchema>;

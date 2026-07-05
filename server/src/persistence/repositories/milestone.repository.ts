@@ -8,6 +8,7 @@ import { prisma } from "./prisma";
 export interface MilestoneRowInput {
   projectAddress: string;
   milestoneIndex: number;
+  description: string;
   budget: bigint;
   durationSeconds: bigint;
   deadline: Date | null;
@@ -25,6 +26,7 @@ export class MilestoneRepository {
   async upsertMilestoneRow(input: MilestoneRowInput): Promise<void> {
     const project = input.projectAddress.toLowerCase();
     const data = {
+      description: input.description,
       budget: input.budget.toString(),
       durationSeconds: input.durationSeconds,
       deadline: input.deadline,

@@ -1,3 +1,4 @@
+import { SlidersHorizontal, X } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -28,6 +29,8 @@ export interface ProjectFiltersValue {
   status?: ProjectStatusValue;
 }
 
+// Barra de filtros con look de buscador inmobiliario: misma funcionalidad (tipo + estado), solo
+// reestilizada en una superficie tipo "panel de busqueda".
 export function ProjectFilters({
   value,
   onChange,
@@ -35,16 +38,25 @@ export function ProjectFilters({
   value: ProjectFiltersValue;
   onChange: (value: ProjectFiltersValue) => void;
 }) {
+  const active = !!(value.type || value.status);
+
   return (
-    <div className="flex flex-wrap items-center gap-3">
+    <div className="animate-fade-up flex flex-wrap items-center gap-3 rounded-xl border border-[var(--fen-border)] bg-card p-3 shadow-sm">
+      <span className="flex items-center gap-2 pl-1 pr-1 text-sm font-medium text-[var(--fen-ink-2)]">
+        <SlidersHorizontal className="size-4 text-[var(--fen-accent)]" />
+        Filtrar
+      </span>
+
+      <div className="hidden h-6 w-px bg-[var(--fen-divider)] sm:block" />
+
       <Select
         value={value.type ?? ALL}
         onValueChange={(v) =>
           onChange({ ...value, type: v === ALL ? undefined : (v as ProjectTypeValue) })
         }
       >
-        <SelectTrigger className="w-44">
-          <SelectValue placeholder="Tipo" />
+        <SelectTrigger className="w-full sm:w-44">
+          <SelectValue placeholder="Tipo de proyecto" />
         </SelectTrigger>
         <SelectContent>
           <SelectItem value={ALL}>Todos los tipos</SelectItem>
@@ -62,7 +74,7 @@ export function ProjectFilters({
           onChange({ ...value, status: v === ALL ? undefined : (v as ProjectStatusValue) })
         }
       >
-        <SelectTrigger className="w-44">
+        <SelectTrigger className="w-full sm:w-44">
           <SelectValue placeholder="Estado" />
         </SelectTrigger>
         <SelectContent>
@@ -75,8 +87,14 @@ export function ProjectFilters({
         </SelectContent>
       </Select>
 
-      {(value.type || value.status) && (
-        <Button variant="ghost" size="sm" onClick={() => onChange({})}>
+      {active && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="ml-auto text-[var(--fen-muted)] hover:text-[var(--fen-clay)]"
+          onClick={() => onChange({})}
+        >
+          <X className="size-3.5" />
           Limpiar
         </Button>
       )}

@@ -7,6 +7,10 @@ uint256 constant VOTING_PERIOD            = 10 minutes;
 uint256 constant QUORUM_BPS               = 5100;   // 51 %
 uint256 constant APPROVAL_THRESHOLD_BPS   = 5100;   // 51 %
 uint256 constant DEVELOPER_SALE_VOTE_WEIGHT = 1 ether;
+// Plazo que tiene el arbitro para destrabar una propuesta que quedo esperandolo (falta de
+// quorum persistente o empate). Vencido sin decision, el hito trabado puede cancelarse para
+// que el proyecto no quede congelado si el arbitro no aparece. Espeja RETRY_WINDOW.
+uint256 constant ARBITER_DECISION_WINDOW  = 1 days;
 
 // ─── Proyecto ────────────────────────────────────────────────────────────────
 

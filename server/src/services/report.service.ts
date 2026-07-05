@@ -7,6 +7,7 @@ import { MilestoneReport, type ReportFileInput } from "../models/MilestoneReport
 import { MilestoneRepository, milestoneRepository } from "../persistence/repositories/milestone.repository";
 import { ReportRepository, reportRepository } from "../persistence/repositories/report.repository";
 import { reportStorage, type ReportStorage } from "../persistence/storage";
+import { cidV0ToBytes32 } from "../persistence/storage/cid";
 
 export interface ReportFileUpload {
   filename: string;
@@ -38,26 +39,43 @@ export class ReportService {
     text: string,
     files: ReportFileUpload[],
   ): Promise<CreateReportResult> {
-    // 1) Hash canonico sobre texto + archivos (lo que ira on-chain).
-    const hashInput: ReportFileInput[] = files.map((f) => ({
-      filename: f.filename,
-      content: f.content,
-    }));
-    const computedHash = MilestoneReport.computeHash(
-      projectAddress,
-      milestoneIndex,
-      text,
-      hashInput,
-    );
-
-    // 2) Guardar archivos en el storage, separando media de documentos.
+    // 1) Guardar archivos en el storage, separando media de documentos. Con IPFS,
+    //    stored.url ya es un gateway content-addressed y stored.ref es el CID del archivo.
     const namespace = `${projectAddress.toLowerCase()}_${milestoneIndex}_${Date.now()}`;
     const mediaUrls: string[] = [];
     const documentUrls: string[] = [];
+    const manifestFiles: { filename: string; cid: string; url: string }[] = [];
     for (const f of files) {
       const stored = await this.storage.put(namespace, f.filename, f.content);
       if (isMedia(f.mimetype)) mediaUrls.push(stored.url);
       else documentUrls.push(stored.url);
+      manifestFiles.push({ filename: f.filename, cid: stored.ref, url: stored.url });
+    }
+
+    // 2) Valor que va on-chain en reportHash + referencia interna de storage.
+    //    - Storage content-addressed (IPFS): pinear un manifest autocontenido (proyecto,
+    //      hito, texto y referencias a cada archivo) y codificar su CID en el bytes32.
+    //      Asi el "hash" on-chain es a la vez prueba de integridad y direccion para
+    //      recuperar el reporte si el frontend se cae.
+    //    - Storage local: SHA-256 canonico del contenido (comportamiento previo).
+    let computedHash: string;
+    let storageRef = namespace;
+    if (this.storage.putManifest) {
+      const manifest = {
+        projectAddress: projectAddress.toLowerCase(),
+        milestoneIndex,
+        text,
+        files: manifestFiles,
+      };
+      const pinned = await this.storage.putManifest(Buffer.from(JSON.stringify(manifest)));
+      computedHash = cidV0ToBytes32(pinned.cid);
+      storageRef = pinned.cid;
+    } else {
+      const hashInput: ReportFileInput[] = files.map((f) => ({
+        filename: f.filename,
+        content: f.content,
+      }));
+      computedHash = MilestoneReport.computeHash(projectAddress, milestoneIndex, text, hashInput);
     }
 
     // 3) Persistir el reporte.
@@ -68,19 +86,43 @@ export class ReportService {
       mediaUrls,
       documentUrls,
       computedHash,
-      storageRef: namespace,
+      storageRef,
       createdByWallet: wallet,
     });
 
+    // 4) reportUrl on-chain: pagina del proyecto en el frontend si esta configurado (link
+    //    legible para humanos); el endpoint del backend como fallback. El reportHash (CID)
+    //    es el respaldo si esa pagina no responde.
     const reportId = report.id as number;
-    const reportUrl = `${env.PUBLIC_BASE_URL.replace(/\/$/, "")}/reports/${reportId}`;
+    const reportUrl = env.FRONTEND_URL
+      ? `${env.FRONTEND_URL.replace(/\/$/, "")}/projects/${projectAddress}/milestones/${milestoneIndex}/report`
+      : `${env.PUBLIC_BASE_URL.replace(/\/$/, "")}/reports/${reportId}`;
     return { reportId, reportUrl, reportHash: computedHash };
   }
 
-  async getReport(id: number): Promise<ReturnType<MilestoneReport["toResponse"]>> {
+  // Construye la URL del manifest en el gateway configurado (el mismo que sirve los
+  // archivos). Se sirve por Pinata, NO por un gateway publico tipo ipfs.io: estos ultimos
+  // tienen que DESCUBRIR el contenido en la red y suelen fallar con 502 para CIDs pineados
+  // solo en Pinata, mientras que el gateway de Pinata siempre tiene el contenido.
+  private withManifestUrl<T extends { cid: string | null }>(
+    resp: T,
+  ): T & { manifestUrl: string | null } {
+    const manifestUrl = resp.cid
+      ? `${env.PINATA_GATEWAY.replace(/\/$/, "")}/ipfs/${resp.cid}`
+      : null;
+    return { ...resp, manifestUrl };
+  }
+
+  async getReport(id: number) {
     const report = await this.reports.findById(id);
     if (!report) throw new NotFoundException("Report not found");
-    return report.toResponse();
+    return this.withManifestUrl(report.toResponse());
+  }
+
+  async getByProjectMilestone(projectAddress: string, milestoneIndex: number) {
+    const report = await this.reports.findLatestByProjectMilestone(projectAddress, milestoneIndex);
+    if (!report) throw new NotFoundException("Report not found");
+    return this.withManifestUrl(report.toResponse());
   }
 
   async getVerification(id: number): Promise<ReturnType<MilestoneReport["toVerification"]>> {

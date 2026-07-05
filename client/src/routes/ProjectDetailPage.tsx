@@ -11,12 +11,12 @@ import { ClaimCommissionPanel } from "@/components/domain/ClaimCommissionPanel";
 import { MaintenancePanel } from "@/components/domain/MaintenancePanel";
 import { RefundPanel } from "@/components/domain/RefundPanel";
 import { ProjectStatusBadge } from "@/components/domain/StatusBadge";
+import { AddressTag } from "@/components/domain/AddressTag";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LoadingState, ErrorState } from "@/components/domain/states";
-import { useWallet } from "@/providers/WalletProvider";
-import { formatWei, isPast, sameAddress, shortAddress } from "@/lib/format";
+import { formatWei, shortAddress } from "@/lib/format";
 
 const TYPE_LABEL = { Investment: "Inversión", Civic: "Cívico" } as const;
 
@@ -24,7 +24,6 @@ export function ProjectDetailPage() {
   const { address } = useParams<{ address: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const { data: project, isLoading, isError, refetch } = useProject(address);
-  const { address: wallet } = useWallet();
 
   if (isLoading) return <LoadingState label="Cargando proyecto…" />;
   if (isError || !project)
@@ -45,23 +44,10 @@ export function ProjectDetailPage() {
   const requestedTab = searchParams.get("tab") ?? "summary";
   const activeTab = validTabs.includes(requestedTab) ? requestedTab : "summary";
 
-  // La ronda de inversión sigue abierta entre el FMPA y el FF: alcanzar el FMPA arranca la
-  // obra (status Building) pero NO cierra la ronda; recién se cierra al llegar al FF
-  // (business_rules/fondeo-y-comision.md). Espejamos el require on-chain de invest():
-  // status ∈ {Funding, Building} && !roundClosed (derivado de totalRaised >= ff), y antes del
-  // FMPA (Funding) además corre el TTL de fondeo.
-  const roundOpen =
-    BigInt(project.totalRaised) < BigInt(project.ff) &&
-    (project.status === "Building" ||
-      (project.status === "Funding" && !isPast(project.fundingDeadline)));
-  // El contrato prohíbe que el developer invierta en su propio proyecto
-  // (FenrirProject.invest: "developer cannot invest"), así que no le mostramos el botón.
-  const isDeveloper = sameAddress(wallet, project.developerWallet);
-
   return (
     <div className="space-y-6">
       <Button variant="ghost" size="sm" asChild>
-        <Link to="/">
+        <Link to="/projects">
           <ArrowLeft /> Volver al catálogo
         </Link>
       </Button>
@@ -76,21 +62,25 @@ export function ProjectDetailPage() {
           </Badge>
         )}
         <Badge variant="outline">{TYPE_LABEL[project.projectType]}</Badge>
-        <ProjectStatusBadge status={project.status} />
+        <ProjectStatusBadge status={project.status} display={project.display} />
         <span className="text-sm text-muted-foreground">
           {project.investorCount} inversores · FDT emitido: {formatWei(project.totalRaised)}
         </span>
-        {roundOpen && !isDeveloper && (
-          <div className="ml-auto">
-            <InvestDialog projectAddress={project.address} />
-          </div>
-        )}
+        {/* El backend decide si el viewer puede invertir (capability); el contrato revalida al firmar. */}
+        <div className="ml-auto">
+          <InvestDialog
+            projectAddress={project.address}
+            invest={project.viewer.capabilities.invest}
+          />
+        </div>
       </div>
 
-      <p className="font-mono text-xs text-muted-foreground">{project.address}</p>
+      <p className="text-xs text-muted-foreground">
+        <AddressTag address={project.address} full />
+      </p>
 
-      {/* Reembolso leido on-chain: aparece aunque el backend no haya espejado la cancelacion. */}
-      <RefundPanel projectAddress={project.address} />
+      {/* Reembolso: aparece cuando el proyecto está cancelado y hay monto reclamable. */}
+      <RefundPanel projectAddress={project.address} projectStatus={project.status} />
 
       <Tabs value={activeTab} onValueChange={(v) => setSearchParams({ tab: v }, { replace: true })}>
         <TabsList>
@@ -110,15 +100,7 @@ export function ProjectDetailPage() {
               <MaintenancePanel project={project} />
             </div>
             <div className="lg:col-span-2">
-              <MilestoneList
-                milestones={project.milestones}
-                projectAddress={project.address}
-                developerWallet={project.developerWallet}
-                totalRaised={project.totalRaised}
-                // Solo se puede declarar un hito una vez arrancada la obra: el proyecto llego al
-                // FMPA (status Building) y se resolvio el hito 0 / se eligio arbitro (currentArbiter).
-                obraStarted={project.status === "Building" && project.currentArbiter != null}
-              />
+              <MilestoneList milestones={project.milestones} projectAddress={project.address} />
             </div>
           </div>
         </TabsContent>

@@ -134,6 +134,10 @@ model Milestone {
   id              Int             @id @default(autoincrement())
   projectAddress  String
   milestoneIndex  Int
+  // Promesa inmutable de lo que el developer entregara en este hito, fijada al crear el proyecto
+  // (Milestone.description on-chain). El DAO vota contra esto. Distinto de reportHash/reportUrl,
+  // que son la prueba de cumplimiento subida al declararlo.
+  description     String          @default("")
   budget          Decimal         @db.Decimal(78, 0)
   // Plazo (segundos) que tendra el hito al activarse. Conocido desde la creacion del proyecto,
   // a diferencia de `deadline` que es la fecha absoluta y solo existe una vez activado.

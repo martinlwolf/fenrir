@@ -32,7 +32,39 @@ export interface ProposalProps {
 export class Proposal {
   constructor(private readonly props: ProposalProps) {}
 
-  private quorumReached(): boolean {
+  // Getters de lectura para que la policy y el service accedan a los campos necesarios
+  // sin exponer `props` ni pasar por toResponse(). No mutan nada (FR-020).
+  get governorProposalId(): number {
+    return this.props.governorProposalId;
+  }
+
+  get deadline(): Date {
+    return this.props.deadline;
+  }
+
+  get status(): ProposalStatusValue {
+    return this.props.status;
+  }
+
+  get votesFor(): bigint {
+    return this.props.votesFor;
+  }
+
+  get votesAgainst(): bigint {
+    return this.props.votesAgainst;
+  }
+
+  get weightVoted(): bigint {
+    return this.props.weightVoted;
+  }
+
+  get totalPowerAtSnapshot(): bigint {
+    return this.props.totalPowerAtSnapshot;
+  }
+
+  // Derivacion del quorum: true si el peso votado supera el umbral del 51% del total en snapshot.
+  // Se expone como getter publico para que ProposalPolicy pueda usarlo sin duplicar la formula.
+  get quorumReached(): boolean {
     const p = this.props;
     return (
       p.totalPowerAtSnapshot > 0n &&
@@ -41,6 +73,10 @@ export class Proposal {
   }
 
   toResponse(): ProposalResponse {
+    // toResponse() NO rellena los campos derivados de Fase 3 (active, expired, display, etc.):
+    // esos los compone GovernanceService via proposalDerived() + proposalCapabilities(). El
+    // model devuelve solo los campos que puede calcular sin necesitar el viewer ni el reloj
+    // del server. El service completa el DTO antes de responder.
     const p = this.props;
     return {
       governorProposalId: p.governorProposalId,
@@ -55,10 +91,21 @@ export class Proposal {
       weightVoted: p.weightVoted.toString(),
       quorumBps: QUORUM_BPS,
       approvalThresholdBps: APPROVAL_THRESHOLD_BPS,
-      quorumReached: this.quorumReached(),
+      quorumReached: this.quorumReached,
       status: p.status,
       result: p.result,
       electedArbiter: p.electedArbiter,
+      // Campos derivados: el service los sobreescribe; aqui solo placeholders para satisfacer
+      // el tipo antes de que el service los rellene con los valores reales.
+      active: false,
+      expired: false,
+      canResolve: false,
+      awaitingArbiter: false,
+      display: { label: "", variant: "outline" as const },
+      lead: "none" as const,
+      passing: false,
+      quorumRemainingWei: "0",
+      viewer: { canBreakTie: { allowed: false } },
     };
   }
 }

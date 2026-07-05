@@ -30,7 +30,7 @@ export function Hero() {
 
             <div className="flex flex-col gap-3.5 pt-1 sm:flex-row sm:items-center">
               <Link
-                to="/"
+                to="/projects"
                 className="inline-flex items-center justify-center rounded-[10px] bg-[var(--fen-ink)] px-7 py-4 text-base font-bold text-white transition-colors hover:bg-[var(--fen-ink)]/90"
               >
                 Explorar proyectos

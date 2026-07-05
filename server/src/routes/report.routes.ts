@@ -21,6 +21,10 @@ reportRouter.post(
   upload.array("files"),
   asyncHandler(reportController.create),
 );
+reportRouter.get(
+  "/projects/:address/milestones/:index/report",
+  asyncHandler(reportController.getByMilestone),
+);
 reportRouter.get("/reports/:id", asyncHandler(reportController.get));
 reportRouter.get("/reports/:id/verification", asyncHandler(reportController.verification));
 
@@ -28,6 +32,12 @@ registerReadPath({
   method: "post",
   path: "/projects/{address}/milestones/{index}/report",
   summary: "Sube el reporte de un hito; devuelve hash SHA-256 + URL (auth developer)",
+  tags: ["Reports"],
+});
+registerReadPath({
+  method: "get",
+  path: "/projects/{address}/milestones/{index}/report",
+  summary: "Reporte mas reciente de un hito (contenido + CID IPFS + verificacion)",
   tags: ["Reports"],
 });
 registerReadPath({

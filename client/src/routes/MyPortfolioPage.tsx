@@ -3,6 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { LoadingState, EmptyState, ErrorState } from "@/components/domain/states";
+import { PageHeader } from "@/components/domain/PageHeader";
+import { CertificatePill } from "@/components/domain/CertificateBadge";
 import { TxFeedback } from "@/components/domain/TxFeedback";
 import { useWallet } from "@/providers/WalletProvider";
 import { useInvestments, useClaimable } from "@/hooks/useInvestments";
@@ -41,12 +43,18 @@ function ClaimButton({ projectAddress, type }: { projectAddress: string; type: C
 function InvestmentRow({ inv }: { inv: InvestmentResponse }) {
   const { data: project } = useProject(inv.projectAddress);
   return (
-    <div className="flex items-center justify-between gap-4 border-b py-2 last:border-0">
-      <Link to={`/projects/${inv.projectAddress}`} className="hover:underline">
-        {shortAddress(inv.projectAddress)}
+    <div className="flex items-center justify-between gap-4 border-b border-[var(--fen-divider)] py-2.5 last:border-0">
+      <Link
+        to={`/projects/${inv.projectAddress}`}
+        className="flex items-center gap-2 font-medium text-[var(--fen-ink)] hover:text-[var(--fen-accent-strong)]"
+      >
+        <CertificatePill kind="fdt" label={project?.tokenSymbol ?? "FDT"} />
+        <span className="font-mono text-sm text-[var(--fen-body)]">
+          {shortAddress(inv.projectAddress)}
+        </span>
       </Link>
       <div className="flex items-center gap-3">
-        <span className="font-medium">{formatWei(inv.amount)}</span>
+        <span className="font-semibold text-[var(--fen-ink)]">{formatWei(inv.amount)}</span>
         {project?.tokenAddress && <TransferFdtDialog tokenAddress={project.tokenAddress} />}
       </div>
     </div>
@@ -68,10 +76,14 @@ export function MyPortfolioPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">Mi participación</h1>
+    <div className="space-y-7">
+      <PageHeader
+        eyebrow="Mi participación"
+        title="Cartera de inversiones"
+        description="Tus participaciones (FDT) en proyectos y lo que tenés disponible para reclamar."
+      />
 
-      <Card>
+      <Card className="animate-fade-up">
         <CardHeader className="pb-2">
           <CardTitle className="text-base">Inversiones</CardTitle>
         </CardHeader>

@@ -4,8 +4,24 @@
 import type { MilestoneStatusValue } from "@shared/constants/enums";
 import type { MilestoneResponse } from "@shared/schemas/project.schema";
 
+// Campos del DTO que NO produce el model: los deriva la MilestonePolicy por wallet consultante
+// (display, estados y capabilities del hito). El model se mantiene puro (FR-020) y devuelve el
+// resto; el service completa estos antes de responder.
+export type MilestoneResponseBase = Omit<
+  MilestoneResponse,
+  | "display"
+  | "pausedForFunds"
+  | "votingExpired"
+  | "retryExpired"
+  | "declarable"
+  | "cumulativeBudget"
+  | "fundsShortfall"
+  | "viewer"
+>;
+
 export interface MilestoneProps {
   milestoneIndex: number;
+  description: string;
   budget: bigint;
   durationSeconds: bigint | null;
   deadline: Date | null;
@@ -24,10 +40,33 @@ export class Milestone {
     return this.props.milestoneIndex;
   }
 
-  toResponse(): MilestoneResponse {
+  // Getters de lectura para que la policy derive estados/capabilities sin exponer `props` ni
+  // duplicar el shape. No mutan nada: el model sigue siendo puro (FR-020).
+  get status(): MilestoneStatusValue {
+    return this.props.status;
+  }
+
+  get budget(): bigint {
+    return this.props.budget;
+  }
+
+  get deadline(): Date | null {
+    return this.props.deadline;
+  }
+
+  get retryCount(): number {
+    return this.props.retryCount;
+  }
+
+  get proposalId(): number | null {
+    return this.props.proposalId;
+  }
+
+  toResponse(): MilestoneResponseBase {
     const p = this.props;
     return {
       milestoneIndex: p.milestoneIndex,
+      description: p.description ?? "",
       budget: p.budget.toString(),
       // `!= null` (no `!== null`) para cubrir tambien `undefined` (p.ej. Prisma Client
       // desactualizado o filas sin la columna): el schema admite null.

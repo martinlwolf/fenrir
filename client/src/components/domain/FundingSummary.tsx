@@ -1,10 +1,12 @@
+import type { ReactNode } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { AddressTag } from "./AddressTag";
 import { useWallet } from "@/providers/WalletProvider";
-import { formatWei, formatDate, sameAddress, shortAddress } from "@/lib/format";
+import { formatWei, formatDate, sameAddress } from "@/lib/format";
 import type { ProjectDetailResponse } from "@shared/schemas/project.schema";
 
-function Row({ label, value }: { label: string; value: string }) {
+function Row({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="flex justify-between gap-4 text-sm">
       <span className="text-muted-foreground">{label}</span>
@@ -38,7 +40,13 @@ export function FundingSummary({ project }: { project: ProjectDetailResponse }) 
         {project.salePrice && <Row label="Precio de venta" value={formatWei(project.salePrice)} />}
         <Row
           label="Árbitro"
-          value={project.currentArbiter ? shortAddress(project.currentArbiter) : "Sin elegir"}
+          value={
+            project.currentArbiter ? (
+              <AddressTag address={project.currentArbiter} />
+            ) : (
+              "Sin elegir"
+            )
+          }
         />
       </CardContent>
     </Card>

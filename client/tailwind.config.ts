@@ -33,8 +33,20 @@ export default {
           "Consolas",
           "monospace",
         ],
+        // Serif editorial para titulos: le da el aire "inmobiliaria premium" sin web fonts (100% offline).
+        serif: ["Georgia", "Cambria", "Times New Roman", "serif"],
       },
       colors: {
+        // Acentos de marca apuntando a los tokens Fenrir (Slate & Emerald).
+        brand: {
+          DEFAULT: "var(--fen-accent)",
+          strong: "var(--fen-accent-strong)",
+          soft: "var(--fen-accent-soft)",
+        },
+        ink: {
+          DEFAULT: "var(--fen-ink)",
+          2: "var(--fen-ink-2)",
+        },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",

@@ -1,6 +1,7 @@
 // Construccion de la app Express: middlewares base, archivos estaticos de reportes,
 // rutas del API, documentacion OpenAPI en /docs, health check, y el manejo
 // centralizado de errores al final.
+import cors from "cors";
 import express, { type Express } from "express";
 import path from "node:path";
 import swaggerUi from "swagger-ui-express";
@@ -13,23 +14,12 @@ import { buildApiRouter } from "./routes";
 export function buildApp(): Express {
   const app = express();
 
-  app.use((req, res, next) => {
-    const allowedOrigin = env.FRONTEND_URL;
-
-    if (allowedOrigin && req.headers.origin === allowedOrigin) {
-      res.setHeader("Access-Control-Allow-Origin", allowedOrigin);
-      res.setHeader("Access-Control-Allow-Credentials", "true");
-    }
-
-    if (req.method === "OPTIONS") {
-      res.setHeader("Access-Control-Allow-Methods", "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS");
-      res.setHeader("Access-Control-Allow-Headers", "Content-Type,Authorization,x-wallet-address,x-wallet-signature");
-      res.status(204).end();
-      return;
-    }
-
-    next();
-  });
+  // CORS abierto: refleja cualquier origen (necesario cuando el backend se expone por
+  // ngrok y el front vive en Vercel). `origin: true` devuelve el Origin de la request,
+  // lo que permite mantener credentials; `cors` ya maneja el preflight OPTIONS solo.
+  // No fijamos `allowedHeaders`: asi `cors` refleja los headers que pida el browser en el
+  // preflight (Access-Control-Request-Headers), incluido `ngrok-skip-browser-warning`.
+  app.use(cors({ origin: true, credentials: true }));
 
   app.use(express.json({ limit: "1mb" }));
 

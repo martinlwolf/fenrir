@@ -1,7 +1,9 @@
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
 import { ProjectCard } from "../ProjectCard";
+import { WalletProvider } from "@/providers/WalletProvider";
 import type { ProjectResponse } from "@shared/schemas/project.schema";
 
 const project: ProjectResponse = {
@@ -26,15 +28,46 @@ const project: ProjectResponse = {
   penaltyAccumulatedBps: 0,
   currentArbiter: null,
   currentMilestoneIndex: 0,
+  // Campos derivados que ahora el backend embebe (el front no los calcula).
+  fundedBps: 3500,
+  fundingOpen: true,
+  display: { label: "En fondeo", variant: "warning" },
+  viewer: {
+    role: "anonymous",
+    isDeveloper: false,
+    isArbiter: false,
+    isInvestor: false,
+    capabilities: {
+      invest: { allowed: false, reason: "Conectá tu wallet para invertir" },
+      claimCommission: {
+        allowed: false,
+        reason: "Solo el desarrollador puede reclamar la comisión",
+      },
+      canExecuteSale: { allowed: false, reason: "Datos de venta no disponibles" },
+    },
+  },
 };
+
+// ProjectCard consume react-query (useInvestments) y el contexto de wallet (useMembership),
+// asi que se renderiza envuelto en sus providers.
+function renderCard() {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <WalletProvider>
+        <MemoryRouter>
+          <ProjectCard project={project} />
+        </MemoryRouter>
+      </WalletProvider>
+    </QueryClientProvider>,
+  );
+}
 
 describe("ProjectCard", () => {
   it("muestra tipo y estado del proyecto", () => {
-    render(
-      <MemoryRouter>
-        <ProjectCard project={project} />
-      </MemoryRouter>,
-    );
+    renderCard();
     expect(screen.getByText("Inversión")).toBeInTheDocument();
     expect(screen.getByText("En fondeo")).toBeInTheDocument();
   });

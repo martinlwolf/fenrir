@@ -14,7 +14,7 @@ import {
 import { TxFeedback } from "@/components/domain/TxFeedback";
 import { useWallet } from "@/providers/WalletProvider";
 import { useWrite } from "@/hooks/useWrite";
-import { useOnchainDeveloper } from "@/hooks/useOnchainDeveloper";
+import { useDeveloper } from "@/hooks/useDeveloper";
 import { createProject } from "@/lib/chain/contracts";
 import { ethToWei } from "@/lib/format";
 import {
@@ -25,6 +25,9 @@ import {
 } from "@shared/constants/enums";
 
 interface MilestoneInput {
+  // Promesa de lo que el developer se compromete a entregar en el hito. Queda inmutable
+  // on-chain y es contra lo que el DAO vota el cumplimiento.
+  description: string;
   budgetEth: string;
   durationDays: string;
 }
@@ -37,11 +40,10 @@ export function CreateProjectPage() {
   const navigate = useNavigate();
   const { address, isOnSepolia, connect, switchNetwork, hasWallet } = useWallet();
 
-  // Registro leído DIRECTO del factory on-chain: es lo que valida createProject. Si lo
-  // sacáramos del backend espejo, tras un redeploy del factory diría "registrado" y la
-  // creación revertiría con "developer not registered".
-  const { data: onchainDev, isLoading: devLoading } = useOnchainDeveloper(address);
-  const isRegistered = !!onchainDev?.registered;
+  // Registro leído del backend: 404 si no existe → isError=true, data=undefined → no registrado.
+  const developer = useDeveloper(address ?? undefined);
+  const isRegistered = !developer.isLoading && !!developer.data;
+  const devLoading = developer.isLoading;
 
   const create = useWrite();
   const [tokenName, setTokenName] = useState("");
@@ -53,7 +55,7 @@ export function CreateProjectPage() {
   const [deadline, setDeadline] = useState("");
   const [estimatedSalePrice, setEstimatedSalePrice] = useState("");
   const [milestones, setMilestones] = useState<MilestoneInput[]>([
-    { budgetEth: "", durationDays: "" },
+    { description: "", budgetEth: "", durationDays: "" },
   ]);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -73,6 +75,12 @@ export function CreateProjectPage() {
         if (!Number.isFinite(days) || days <= 0) throw new Error();
         return Math.round(days * 86400);
       });
+      const descriptions = milestones.map((m) => {
+        const desc = m.description.trim();
+        // Cada hito debe declarar su promesa: es el patron contra el que vota el DAO.
+        if (!desc) throw new Error();
+        return desc;
+      });
       const deadlineTs = Math.floor(new Date(deadline).getTime() / 1000);
       if (!Number.isFinite(deadlineTs)) throw new Error();
 
@@ -87,13 +95,16 @@ export function CreateProjectPage() {
           fundingDeadline: deadlineTs,
           milestoneBudgets: budgets,
           milestoneDurations: durations,
+          milestoneDescriptions: descriptions,
           estimatedSalePrice:
             projectType === "Investment" && estimatedSalePrice ? ethToWei(estimatedSalePrice) : 0n,
         }),
       );
       if (ok) setTimeout(() => navigate("/"), 1500);
     } catch {
-      setFormError("Revisá los campos: montos en ETH y duraciones en días válidas.");
+      setFormError(
+        "Revisá los campos: cada hito necesita una descripción, un monto en ETH y una duración en días válidos.",
+      );
     }
   }
 
@@ -216,34 +227,51 @@ export function CreateProjectPage() {
           </div>
 
           <div className="space-y-2">
-            <Label>Hitos (presupuesto y duración)</Label>
+            <Label>Hitos (promesa, presupuesto y duración)</Label>
+            <p className="text-xs text-muted-foreground">
+              La descripción es la promesa de lo que entregás en cada hito. Queda fija on-chain y
+              es contra lo que los inversores votan si se cumplió.
+            </p>
             {milestones.map((m, i) => (
-              <div key={i} className="flex gap-2">
-                <Input
-                  placeholder="Tranche (ETH)"
-                  value={m.budgetEth}
-                  onChange={(e) => updateMilestone(i, { budgetEth: e.target.value })}
+              <div key={i} className="space-y-2 rounded-md border p-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Hito {i + 1}</span>
+                  {milestones.length > 1 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setMilestones((ms) => ms.filter((_, idx) => idx !== i))}
+                    >
+                      Quitar
+                    </Button>
+                  )}
+                </div>
+                <textarea
+                  className="flex min-h-20 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  placeholder="¿Qué te comprometés a entregar en este hito? (ej: cimientos y estructura de la planta baja terminados)"
+                  value={m.description}
+                  onChange={(e) => updateMilestone(i, { description: e.target.value })}
                 />
-                <Input
-                  placeholder="Días"
-                  value={m.durationDays}
-                  onChange={(e) => updateMilestone(i, { durationDays: e.target.value })}
-                />
-                {milestones.length > 1 && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setMilestones((ms) => ms.filter((_, idx) => idx !== i))}
-                  >
-                    Quitar
-                  </Button>
-                )}
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Tranche (ETH)"
+                    value={m.budgetEth}
+                    onChange={(e) => updateMilestone(i, { budgetEth: e.target.value })}
+                  />
+                  <Input
+                    placeholder="Días"
+                    value={m.durationDays}
+                    onChange={(e) => updateMilestone(i, { durationDays: e.target.value })}
+                  />
+                </div>
               </div>
             ))}
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setMilestones((ms) => [...ms, { budgetEth: "", durationDays: "" }])}
+              onClick={() =>
+                setMilestones((ms) => [...ms, { description: "", budgetEth: "", durationDays: "" }])
+              }
             >
               Agregar hito
             </Button>

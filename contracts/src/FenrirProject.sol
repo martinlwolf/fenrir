@@ -33,6 +33,10 @@ contract FenrirProject is ReentrancyGuard, IFenrirProjectCallback {
         bytes32 reportHash;
         string reportUrl;
         uint256 proposalId;
+        // Promesa inmutable de lo que el desarrollador se compromete a entregar en este hito,
+        // fijada al crear el proyecto. Es el patron contra el que los inversores votan si el
+        // hito se cumplio segun lo pactado (el reportHash/reportUrl es la prueba de cumplimiento).
+        string description;
     }
 
     struct SaleOffer {
@@ -116,10 +120,12 @@ contract FenrirProject is ReentrancyGuard, IFenrirProjectCallback {
         uint256 fundingDeadline_,
         uint256[] memory milestoneBudgets_,
         uint256[] memory milestoneDurations_,
+        string[] memory milestoneDescriptions_,
         uint256 estimatedSalePrice_
     ) {
         require(
             milestoneBudgets_.length == milestoneDurations_.length
+            && milestoneBudgets_.length == milestoneDescriptions_.length
             && milestoneBudgets_.length > 0, "FenrirProject: milestones mismatch"
         );
 
@@ -136,7 +142,8 @@ contract FenrirProject is ReentrancyGuard, IFenrirProjectCallback {
                 status: MilestoneStatus.Pending,
                 reportHash: bytes32(0),
                 reportUrl: "",
-                proposalId: 0
+                proposalId: 0,
+                description: milestoneDescriptions_[i]
             }));
         }
         require(sum == ff_, "FenrirProject: FF must equal sum of milestone budgets");
@@ -304,8 +311,9 @@ contract FenrirProject is ReentrancyGuard, IFenrirProjectCallback {
         }
     }
 
-    /// Cualquier inversor puede cancelar si el desarrollador no declaro el hito vigente
-    /// antes de su deadline, o si quedo pausado esperando fondos para el proximo hito.
+    /// Cualquier inversor puede cancelar si el desarrollador no declaro el hito vigente antes
+    /// de su deadline, si quedo pausado esperando fondos para el proximo hito, o si la votacion
+    /// del hito quedo trabada esperando a un arbitro que no decide dentro de su ventana.
     function cancelStalledMilestone() external {
         require(status == ProjectStatus.Building, "FenrirProject: not building");
         require(token.balanceOf(msg.sender) > 0, "FenrirProject: not an investor");
@@ -313,7 +321,8 @@ contract FenrirProject is ReentrancyGuard, IFenrirProjectCallback {
         Milestone storage m = milestones[currentMilestoneIndex];
         bool deadlineMissed = m.status == MilestoneStatus.Pending && block.timestamp > m.deadline;
         bool stalledForFunds = m.status == MilestoneStatus.Declared && !_fundsAvailableFor(currentMilestoneIndex);
-        require(deadlineMissed || stalledForFunds, "FenrirProject: milestone not stalled");
+        bool arbiterTimedOut = m.status == MilestoneStatus.Voting && governor.isArbiterTimedOut(m.proposalId);
+        require(deadlineMissed || stalledForFunds || arbiterTimedOut, "FenrirProject: milestone not stalled");
         _cancel();
     }
 

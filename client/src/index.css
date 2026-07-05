@@ -4,71 +4,89 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* --- Tema shadcn (Slate & Emerald) --- */
+    --background: 100 11% 97%;
+    --foreground: 214 28% 15%;
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 214 28% 15%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
-    --radius: 0.5rem;
+    --popover-foreground: 214 28% 15%;
+    /* primary = tinta slate: botones serios de inmobiliaria */
+    --primary: 214 28% 15%;
+    --primary-foreground: 150 20% 98%;
+    /* secondary = arena calida */
+    --secondary: 40 25% 90%;
+    --secondary-foreground: 214 28% 18%;
+    --muted: 150 8% 94%;
+    --muted-foreground: 215 12% 42%;
+    /* accent (hover de ghost/outline) neutro calido */
+    --accent: 40 24% 91%;
+    --accent-foreground: 214 28% 18%;
+    --destructive: 11 61% 47%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 150 9% 88%;
+    --input: 150 9% 88%;
+    --ring: 158 78% 27%;
+    --radius: 0.625rem;
 
-    /* Tokens semánticos de la landing (diseño Fenrir · Home, light). No tocan el tema shadcn. */
-    --fen-bg: #ffffff;
-    --fen-surface: #f6f7f9;
-    --fen-surface-2: #f2f4f7;
-    --fen-border: #e6e7eb;
-    --fen-border-strong: #d7d9e0;
-    --fen-divider: #eef0f3;
-    --fen-rule: #e0e2e8;
-    --fen-ink: #14152b;
-    --fen-ink-2: #3c404d;
-    --fen-body: #5a5e6b;
-    --fen-muted: #8a8e99;
-    --fen-accent: #2563eb;
-    --fen-verified: #1f9d55;
-    --fen-verified-soft: #eaf6ee;
-    --fen-amber: #b7791f;
-    --fen-amber-soft: #fef3e2;
+    /* --- Tokens semanticos Fenrir (Slate & Emerald) --- */
+    --fen-bg: #f6f7f5;
+    --fen-surface: #eff1ef;
+    --fen-surface-2: #e9ece9;
+    --fen-border: #e1e4e1;
+    --fen-border-strong: #cdd2ce;
+    --fen-divider: #eaedea;
+    --fen-rule: #dde1dd;
+    --fen-ink: #1b2430;
+    --fen-ink-2: #38414c;
+    --fen-body: #525a63;
+    --fen-muted: #8a9099;
+    --fen-accent: #0f7a52;
+    --fen-accent-strong: #0b5c3e;
+    --fen-accent-soft: #e4f2ea;
+    --fen-verified: #0f7a52;
+    --fen-verified-soft: #e4f2ea;
+    --fen-amber: #9a6b1e;
+    --fen-amber-soft: #f6ecdb;
+    --fen-sand: #ebe6dc;
+    --fen-clay: #c0492f;
+    --fen-clay-soft: #f7e7e2;
     /* Superficie oscura (CTA / acentos sobre tinta) */
-    --fen-dark-surface: #23253d;
-    --fen-dark-border: #3a3d57;
-    --fen-on-dark-dim: #c9ccd6;
-    --fen-on-dark-muted: #9aa0b4;
+    --fen-dark-surface: #1b2430;
+    --fen-dark-border: #2c3744;
+    --fen-on-dark-dim: #c7cdd2;
+    --fen-on-dark-muted: #97a0a8;
+    /* Identidad de tokens/credenciales on-chain */
+    --fen-cert-completion: #0f7a52; /* Certificado de Finalizacion (ERC-721 soulbound) */
+    --fen-cert-completion-soft: #e4f2ea;
+    --fen-cert-failed: #c0492f; /* Certificado de Proyecto Fallido */
+    --fen-cert-failed-soft: #f7e7e2;
+    --fen-cert-badge: #6d5bd0; /* Insignia de participacion por hito (ERC-1155) */
+    --fen-cert-badge-soft: #ece9fb;
+    --fen-fdt: #b0863c; /* FDT (ERC-20) - latón/dorado */
+    --fen-fdt-soft: #f6efe1;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
+    --background: 214 30% 9%;
+    --foreground: 150 20% 96%;
+    --card: 214 28% 12%;
+    --card-foreground: 150 20% 96%;
+    --popover: 214 28% 12%;
+    --popover-foreground: 150 20% 96%;
+    --primary: 150 20% 96%;
+    --primary-foreground: 214 28% 15%;
+    --secondary: 214 20% 20%;
+    --secondary-foreground: 150 20% 96%;
+    --muted: 214 20% 20%;
+    --muted-foreground: 215 14% 65%;
+    --accent: 214 20% 20%;
+    --accent-foreground: 150 20% 96%;
+    --destructive: 11 55% 42%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 214 20% 22%;
+    --input: 214 20% 22%;
+    --ring: 158 60% 45%;
   }
 }
 
@@ -78,5 +96,105 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-feature-settings: "ss01", "cv01";
+  }
+}
+
+@layer utilities {
+  /* Entradas suaves para listados y secciones. Se combinan con un delay inline para escalonar. */
+  .animate-fade-up {
+    animation: fen-fade-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .animate-fade-in {
+    animation: fen-fade-in 0.4s ease-out both;
+  }
+  .animate-rise {
+    animation: fen-rise 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  /* Card "inmobiliaria": eleva y resalta el borde al hover. */
+  .card-hover {
+    transition:
+      transform 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+      box-shadow 0.25s ease,
+      border-color 0.25s ease;
+  }
+  .card-hover:hover {
+    transform: translateY(-4px);
+    box-shadow:
+      0 18px 40px -24px rgba(27, 36, 48, 0.45),
+      0 4px 12px -8px rgba(27, 36, 48, 0.2);
+  }
+
+  /* Zoom lento de la foto del edificio dentro de su recorte. */
+  .img-zoom {
+    transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .group:hover .img-zoom {
+    transform: scale(1.06);
+  }
+
+  /* Shimmer para skeletons de carga. */
+  .shimmer {
+    background: linear-gradient(
+      100deg,
+      var(--fen-surface) 30%,
+      var(--fen-surface-2) 50%,
+      var(--fen-surface) 70%
+    );
+    background-size: 200% 100%;
+    animation: fen-shimmer 1.4s ease-in-out infinite;
+  }
+}
+
+@keyframes fen-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fen-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fen-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes fen-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-up,
+  .animate-fade-in,
+  .animate-rise,
+  .shimmer,
+  .img-zoom,
+  .card-hover {
+    animation: none !important;
+    transition: none !important;
   }
 }
