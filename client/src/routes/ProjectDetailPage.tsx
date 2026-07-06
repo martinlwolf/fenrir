@@ -3,6 +3,8 @@ import { ArrowLeft } from "lucide-react";
 import { useProject } from "@/hooks/useProject";
 import { FundingSummary } from "@/components/domain/FundingSummary";
 import { MilestoneList } from "@/components/domain/MilestoneList";
+import { RenderTourShowcase } from "@/components/domain/RenderTourShowcase";
+import { getProjectTour } from "@/lib/mock/tourProjects";
 import { InvestDialog } from "@/components/domain/InvestDialog";
 import { GovernanceSection } from "@/components/domain/GovernanceSection";
 import { DeveloperInfoCard } from "@/components/domain/DeveloperInfoCard";
@@ -43,6 +45,10 @@ export function ProjectDetailPage() {
   const validTabs = ["summary", "governance", ...(saleTabAvailable ? ["sale"] : [])];
   const requestedTab = searchParams.get("tab") ?? "summary";
   const activeTab = validTabs.includes(requestedTab) ? requestedTab : "summary";
+
+  // Los proyectos de Inversión muestran el recorrido virtual (assets demo compartidos), gateado por
+  // sus propios hitos. Los Cívicos no tienen recorrido de edificio -> undefined.
+  const tour = getProjectTour(project.projectType);
 
   return (
     <div className="space-y-6">
@@ -89,6 +95,18 @@ export function ProjectDetailPage() {
           {saleTabAvailable && <TabsTrigger value="sale">Venta</TabsTrigger>}
         </TabsList>
         <TabsContent value="summary">
+          {/* Recorrido virtual (assets demo compartidos), gateado por los hitos reales. Solo en
+              proyectos de Inversión; los Cívicos no lo tienen (tour === undefined). */}
+          {tour && (
+            <div className="mb-6">
+              <RenderTourShowcase
+                tour={tour}
+                milestones={project.milestones}
+                title={project.tokenName ?? undefined}
+                currentMilestoneIndex={project.currentMilestoneIndex}
+              />
+            </div>
+          )}
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
             <div className="space-y-6 lg:col-span-1">
               <FundingSummary project={project} />
