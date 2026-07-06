@@ -12,12 +12,12 @@ export class GovernanceController {
 
   listProposals = async (req: Request, res: Response): Promise<void> => {
     const { address } = addressParamSchema.parse(req.params);
-    res.json(await this.governance.listProposals(address));
+    res.json(await this.governance.listProposals(address, req.viewerWallet ?? null));
   };
 
   getProposal = async (req: Request, res: Response): Promise<void> => {
     const { address, proposalId } = proposalParamsSchema.parse(req.params);
-    res.json(await this.governance.getProposal(address, proposalId));
+    res.json(await this.governance.getProposal(address, proposalId, req.viewerWallet ?? null));
   };
 
   votingPower = async (req: Request, res: Response): Promise<void> => {

@@ -4,7 +4,6 @@ import { TxFeedback } from "./TxFeedback";
 import { useWallet } from "@/providers/WalletProvider";
 import { useWrite } from "@/hooks/useWrite";
 import { claimCommission } from "@/lib/chain/contracts";
-import { sameAddress } from "@/lib/format";
 import type { ProjectDetailResponse } from "@shared/schemas/project.schema";
 
 // Reclamo de comisión del developer (proyecto Completed). La API todavía no expone el monto
@@ -18,8 +17,10 @@ export function ClaimCommissionPanel({ project }: { project: ProjectDetailRespon
   const { phase, error, run } = useWrite([["project", project.address]]);
   const busy = phase === "signing" || phase === "mining" || phase === "propagating";
 
-  const isDeveloper = sameAddress(address, project.developerWallet);
-  if (!isDeveloper || project.status !== "Completed") return null;
+  // El backend decide si el viewer es el developer y si puede reclamar. El front no reimplementa
+  // la regla: solo oculta el panel a no-developers y habilita/deshabilita el boton segun la capability.
+  const claim = project.viewer.capabilities.claimCommission;
+  if (!project.viewer.isDeveloper) return null;
 
   return (
     <Card>
@@ -28,11 +29,16 @@ export function ClaimCommissionPanel({ project }: { project: ProjectDetailRespon
       </CardHeader>
       <CardContent className="space-y-2">
         <p className="text-sm text-muted-foreground">
-          El proyecto está completado. Podés reclamar tu comisión (el contrato calcula el monto
-          neto de penalizaciones).
+          {claim.allowed
+            ? "El proyecto está completado. Podés reclamar tu comisión (el contrato calcula el monto neto de penalizaciones)."
+            : (claim.reason ?? "Todavía no podés reclamar la comisión.")}
         </p>
         {address && isOnSepolia && (
-          <Button size="sm" disabled={busy} onClick={() => void run(() => claimCommission(project.address))}>
+          <Button
+            size="sm"
+            disabled={busy || !claim.allowed}
+            onClick={() => void run(() => claimCommission(project.address))}
+          >
             {busy ? "Procesando…" : "Reclamar comisión"}
           </Button>
         )}

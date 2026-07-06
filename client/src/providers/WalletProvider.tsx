@@ -9,6 +9,7 @@ import {
   isOnSepolia,
   switchToSepolia,
 } from "@/lib/chain/provider";
+import { setViewerAddress } from "@/lib/api";
 
 interface WalletState {
   address: string | null;
@@ -57,6 +58,13 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       eth.removeListener("chainChanged", onChain);
     };
   }, [refresh]);
+
+  // Hint de UI para el backend: apenas hay wallet conectada (aunque no haya firma) le pasamos
+  // la direccion al cliente Axios para que resuelva el `viewer` en los GET. Sin firma no da
+  // permisos: la seguridad real es on-chain.
+  React.useEffect(() => {
+    setViewerAddress(address);
+  }, [address]);
 
   const connect = React.useCallback(async () => {
     setConnecting(true);

@@ -3,25 +3,32 @@ import { Button } from "@/components/ui/button";
 import { TxFeedback } from "./TxFeedback";
 import { useWallet } from "@/providers/WalletProvider";
 import { useWrite } from "@/hooks/useWrite";
-import { useRefundInfo } from "@/hooks/useRefundInfo";
+import { useClaimable } from "@/hooks/useInvestments";
 import { claimRefund } from "@/lib/chain/contracts";
 import { formatWei } from "@/lib/format";
+import type { ProjectStatusValue } from "@shared/constants/enums";
 
-// Reembolso de un proyecto cancelado. Lee el estado DIRECTO de on-chain (status + balance FDT +
-// refundPool), no del backend espejo, así el botón aparece aunque el ingestion no haya espejado
-// la cancelación. La precondición real la valida igual el contrato en claimRefund().
-export function RefundPanel({ projectAddress }: { projectAddress: string }) {
+export function RefundPanel({
+  projectAddress,
+  projectStatus,
+}: {
+  projectAddress: string;
+  projectStatus: ProjectStatusValue;
+}) {
   const { address, isOnSepolia, connect, switchNetwork, hasWallet } = useWallet();
-  const { data } = useRefundInfo(projectAddress, address);
+  const { data: claimable } = useClaimable(address);
   const { phase, error, run } = useWrite([
-    ["refund-info", projectAddress, address],
     ["claimable", address],
     ["project", projectAddress],
   ]);
   const busy = phase === "signing" || phase === "mining" || phase === "propagating";
 
-  // Solo aparece si on-chain hay algo para reclamar para esta wallet.
-  if (!data?.cancelled || data.claimable <= 0n) return null;
+  const refundItem = claimable?.items.find(
+    (i) => i.projectAddress === projectAddress && i.type === "Refund",
+  );
+
+  // Solo aparece si el proyecto está cancelado y hay un reembolso reclamable para esta wallet.
+  if (projectStatus !== "Cancelled" || !refundItem || BigInt(refundItem.amount) <= 0n) return null;
 
   return (
     <Card className="border-amber-300 dark:border-amber-800">
@@ -31,7 +38,7 @@ export function RefundPanel({ projectAddress }: { projectAddress: string }) {
       <CardContent className="space-y-2">
         <p className="text-sm text-muted-foreground">
           El proyecto fue cancelado. Te corresponde un reembolso proporcional de{" "}
-          <strong>{formatWei(data.claimable.toString())}</strong> por tu FDT.
+          <strong>{formatWei(refundItem.amount)}</strong> por tu FDT.
         </p>
         {!hasWallet ? (
           <p className="text-xs text-muted-foreground">Necesitás una wallet para reclamar.</p>

@@ -9,7 +9,6 @@ import {
   type VotingPowerResponse,
 } from "@shared/schemas/proposal.schema";
 import { getInvestments } from "./investors.service";
-import { sameAddress } from "@/lib/format";
 
 export async function listProposals(address: string): Promise<ProposalResponse[]> {
   const { data } = await api.get(`/projects/${address}/proposals`);
@@ -63,18 +62,17 @@ export async function listMyProposals(wallet: string): Promise<MyProposal[]> {
 
   const perProject = await Promise.all(
     projectAddresses.map(async (address) => {
-      const [proposals, arbiter] = await Promise.all([
-        listProposals(address),
-        getArbiter(address).catch(() => null),
-      ]);
-      const isArbiter = sameAddress(arbiter?.currentArbiter, wallet);
+      const proposals = await listProposals(address);
       return Promise.all(
         proposals.map(async (proposal) => {
+          // isArbiter: viene del backend por propuesta (FR-020) — no necesita llamada a /arbiter.
+          const isArbiter = proposal.viewer.canBreakTie.allowed;
           let canVote = false;
           if (proposal.status === "Active") {
             try {
               const vp = await getVotingPower(address, proposal.governorProposalId, wallet);
-              canVote = vp.votingPower !== "0" && !vp.hasVoted;
+              // canVote ya lo compone el backend: tiene poder, no votó y la propuesta sigue activa.
+              canVote = vp.canVote;
             } catch {
               // si falla el voting-power puntual, lo tratamos como no-votable
             }

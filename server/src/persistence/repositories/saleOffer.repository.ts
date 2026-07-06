@@ -49,6 +49,15 @@ export class SaleOfferRepository {
         }),
     );
   }
+
+  // Devuelve true si existe al menos una oferta Approved para el proyecto. Usado por
+  // SalePolicy para derivar canExecuteSale (la ejecucion requiere una oferta aprobada).
+  async hasApprovedOffer(projectAddress: string): Promise<boolean> {
+    const count = await this.db.saleOffer.count({
+      where: { projectAddress: projectAddress.toLowerCase(), status: "Approved" },
+    });
+    return count > 0;
+  }
 }
 
 export const saleOfferRepository = new SaleOfferRepository();

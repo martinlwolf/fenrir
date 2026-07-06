@@ -22,10 +22,27 @@ export function setWalletAuth(auth: { address: string; signature: string } | nul
   walletAuth = auth;
 }
 
+/**
+ * Direccion de la wallet conectada pero SIN firmar (hint de UI). La setea el WalletProvider
+ * apenas hay wallet conectada. Sirve para que el backend resuelva el `viewer` (que boton/label
+ * mostrar) sin exigir firma; NO es seguridad: la real es on-chain al firmar la tx.
+ */
+let viewerAddress: string | null = null;
+
+export function setViewerAddress(addr: string | null): void {
+  viewerAddress = addr;
+}
+
 api.interceptors.request.use((config) => {
   if (walletAuth) {
+    // Sesion firmada: mandamos direccion + firma (auth real para endpoints protegidos).
     config.headers.set("x-wallet-address", walletAuth.address);
     config.headers.set("x-wallet-signature", walletAuth.signature);
+  } else if (viewerAddress) {
+    // Solo wallet conectada (sin firma): mandamos SOLO la direccion como hint de UI para que
+    // el backend puebla el `viewer`. Sin signature -> los endpoints protegidos siguen exigiendo
+    // firma (correcto); la seguridad real es on-chain.
+    config.headers.set("x-wallet-address", viewerAddress);
   }
   return config;
 });

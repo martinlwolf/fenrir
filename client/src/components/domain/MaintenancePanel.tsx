@@ -3,18 +3,16 @@ import { Button } from "@/components/ui/button";
 import { TxFeedback } from "./TxFeedback";
 import { useWallet } from "@/providers/WalletProvider";
 import { useWrite } from "@/hooks/useWrite";
-import { useInvestments } from "@/hooks/useInvestments";
 import {
   cancelExpiredFunding,
   cancelStalledMilestone,
   pokeFundingGates,
 } from "@/lib/chain/contracts";
-import { isPast, sameAddress } from "@/lib/format";
 import type { ProjectDetailResponse } from "@shared/schemas/project.schema";
 
-// Acciones de mantenimiento / casos borde que destraban un proyecto. El contrato valida cada
-// precondición (estado, rol, deadline, balance); la UI solo ofrece el control en el contexto
-// plausible para no confundir.
+// Acciones de mantenimiento / casos borde que destraban un proyecto. El backend decide los
+// estados derivados y las capabilities (project.maintenance); la UI solo ofrece el control en el
+// contexto plausible y el contrato revalida cada precondición al firmar.
 export function MaintenancePanel({ project }: { project: ProjectDetailResponse }) {
   const { address, isOnSepolia } = useWallet();
   const { phase, error, run } = useWrite([
@@ -23,32 +21,8 @@ export function MaintenancePanel({ project }: { project: ProjectDetailResponse }
   ]);
   const busy = phase === "signing" || phase === "mining" || phase === "propagating";
 
-  // ¿La wallet conectada es inversora del proyecto? Solo un inversor (FDT > 0) puede cancelar
-  // un hito estancado on-chain; el developer no invierte en su propio proyecto, así que no
-  // le ofrecemos un botón que el contrato le rechazaría.
-  const investments = useInvestments(address);
-  const isInvestor =
-    !!address &&
-    (investments.data ?? []).some((inv) => sameAddress(inv.projectAddress, project.address));
-
-  // Fondeo vencido sin alcanzar el FMPA: se puede cancelar para habilitar el reembolso 100%.
-  const fundingExpired =
-    project.status === "Funding" &&
-    isPast(project.fundingDeadline) &&
-    safeLt(project.totalRaised, project.fmpa);
-
+  const { fundingExpired, stalled, canCancelStalled } = project.maintenance;
   const building = project.status === "Building";
-
-  // Hito vigente estancado (espeja cancelStalledMilestone on-chain): o el hito venció en su
-  // ventana (Pending + deadline pasado), o quedó declarado sin los fondos para abrir votación.
-  const current = project.milestones.find((m) => m.milestoneIndex === project.currentMilestoneIndex);
-  const cumulativeBudget = project.milestones
-    .filter((m) => m.milestoneIndex <= project.currentMilestoneIndex)
-    .reduce((sum, m) => sum + safeBig(m.budget), 0n);
-  const deadlineMissed = building && current?.status === "Pending" && isPast(current.deadline);
-  const stalledForFunds =
-    building && current?.status === "Declared" && safeBig(project.totalRaised) < cumulativeBudget;
-  const stalled = !!(deadlineMissed || stalledForFunds);
 
   const showCard = fundingExpired || building;
   if (!showCard) return null;
@@ -82,17 +56,14 @@ export function MaintenancePanel({ project }: { project: ProjectDetailResponse }
 
         {building && (
           <div className="space-y-2">
-            {stalled && (
+            {stalled.active && (
               <div className="space-y-1 rounded-md bg-amber-50 px-2 py-1.5 dark:bg-amber-950/40">
                 <p className="text-sm text-amber-800 dark:text-amber-300">
-                  El proyecto está <strong>estancado</strong>:{" "}
-                  {deadlineMissed
-                    ? "el hito vigente venció sin que el desarrollador lo (re)declarara a tiempo"
-                    : "el hito quedó declarado pero no se juntaron los fondos para abrir su votación"}
-                  . Cualquier inversor puede cancelarlo para habilitar el reembolso proporcional de
-                  las tranches no aprobadas.
+                  El proyecto está <strong>estancado</strong>: {stalled.reason}. Cualquier inversor
+                  puede cancelarlo para habilitar el reembolso proporcional de las tranches no
+                  aprobadas.
                 </p>
-                {ready && isInvestor ? (
+                {ready && canCancelStalled.allowed ? (
                   <Button
                     size="sm"
                     variant="destructive"
@@ -103,7 +74,7 @@ export function MaintenancePanel({ project }: { project: ProjectDetailResponse }
                   </Button>
                 ) : (
                   <p className="text-xs text-amber-800/80 dark:text-amber-300/80">
-                    Solo un inversor del proyecto (que tenga FDT) puede ejecutar la cancelación.
+                    {canCancelStalled.reason}
                   </p>
                 )}
               </div>
@@ -130,22 +101,4 @@ export function MaintenancePanel({ project }: { project: ProjectDetailResponse }
       </CardContent>
     </Card>
   );
-}
-
-// Comparación de montos en wei (string) sin lógica de negocio: solo decide si mostrar un
-// control que de todos modos el contrato vuelve a validar.
-function safeLt(a: string, b: string): boolean {
-  try {
-    return BigInt(a) < BigInt(b);
-  } catch {
-    return false;
-  }
-}
-
-function safeBig(x: string): bigint {
-  try {
-    return BigInt(x);
-  } catch {
-    return 0n;
-  }
 }

@@ -3,6 +3,8 @@ import { ArrowLeft } from "lucide-react";
 import { useProject } from "@/hooks/useProject";
 import { FundingSummary } from "@/components/domain/FundingSummary";
 import { MilestoneList } from "@/components/domain/MilestoneList";
+import { RenderTourShowcase } from "@/components/domain/RenderTourShowcase";
+import { getProjectTour } from "@/lib/mock/tourProjects";
 import { InvestDialog } from "@/components/domain/InvestDialog";
 import { GovernanceSection } from "@/components/domain/GovernanceSection";
 import { DeveloperInfoCard } from "@/components/domain/DeveloperInfoCard";
@@ -44,6 +46,10 @@ export function ProjectDetailPage() {
   const requestedTab = searchParams.get("tab") ?? "summary";
   const activeTab = validTabs.includes(requestedTab) ? requestedTab : "summary";
 
+  // Los proyectos de Inversión muestran el recorrido virtual (assets demo compartidos), gateado por
+  // sus propios hitos. Los Cívicos no tienen recorrido de edificio -> undefined.
+  const tour = getProjectTour(project.projectType);
+
   return (
     <div className="space-y-6">
       <Button variant="ghost" size="sm" asChild>
@@ -62,13 +68,16 @@ export function ProjectDetailPage() {
           </Badge>
         )}
         <Badge variant="outline">{TYPE_LABEL[project.projectType]}</Badge>
-        <ProjectStatusBadge status={project.status} />
+        <ProjectStatusBadge status={project.status} display={project.display} />
         <span className="text-sm text-muted-foreground">
           {project.investorCount} inversores · FDT emitido: {formatWei(project.totalRaised)}
         </span>
-        {/* Botón siempre visible: el contrato valida estado/ronda/rol al firmar invest(). */}
+        {/* El backend decide si el viewer puede invertir (capability); el contrato revalida al firmar. */}
         <div className="ml-auto">
-          <InvestDialog projectAddress={project.address} />
+          <InvestDialog
+            projectAddress={project.address}
+            invest={project.viewer.capabilities.invest}
+          />
         </div>
       </div>
 
@@ -76,8 +85,8 @@ export function ProjectDetailPage() {
         <AddressTag address={project.address} full />
       </p>
 
-      {/* Reembolso leido on-chain: aparece aunque el backend no haya espejado la cancelacion. */}
-      <RefundPanel projectAddress={project.address} />
+      {/* Reembolso: aparece cuando el proyecto está cancelado y hay monto reclamable. */}
+      <RefundPanel projectAddress={project.address} projectStatus={project.status} />
 
       <Tabs value={activeTab} onValueChange={(v) => setSearchParams({ tab: v }, { replace: true })}>
         <TabsList>
@@ -86,6 +95,18 @@ export function ProjectDetailPage() {
           {saleTabAvailable && <TabsTrigger value="sale">Venta</TabsTrigger>}
         </TabsList>
         <TabsContent value="summary">
+          {/* Recorrido virtual (assets demo compartidos), gateado por los hitos reales. Solo en
+              proyectos de Inversión; los Cívicos no lo tienen (tour === undefined). */}
+          {tour && (
+            <div className="mb-6">
+              <RenderTourShowcase
+                tour={tour}
+                milestones={project.milestones}
+                title={project.tokenName ?? undefined}
+                currentMilestoneIndex={project.currentMilestoneIndex}
+              />
+            </div>
+          )}
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
             <div className="space-y-6 lg:col-span-1">
               <FundingSummary project={project} />
@@ -97,15 +118,7 @@ export function ProjectDetailPage() {
               <MaintenancePanel project={project} />
             </div>
             <div className="lg:col-span-2">
-              <MilestoneList
-                milestones={project.milestones}
-                projectAddress={project.address}
-                developerWallet={project.developerWallet}
-                totalRaised={project.totalRaised}
-                // Solo se puede declarar un hito una vez arrancada la obra: el proyecto llego al
-                // FMPA (status Building) y se resolvio el hito 0 / se eligio arbitro (currentArbiter).
-                obraStarted={project.status === "Building" && project.currentArbiter != null}
-              />
+              <MilestoneList milestones={project.milestones} projectAddress={project.address} />
             </div>
           </div>
         </TabsContent>

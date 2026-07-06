@@ -9,7 +9,7 @@ import { useWallet } from "@/providers/WalletProvider";
 import { useVotingPower } from "@/hooks/useProposals";
 import { useWrite } from "@/hooks/useWrite";
 import { arbiterDecide, castVote, resolve } from "@/lib/chain/contracts";
-import { formatWei, isPast } from "@/lib/format";
+import { formatWei } from "@/lib/format";
 import type { ProposalResponse } from "@shared/schemas/proposal.schema";
 
 const KIND_LABEL = {
@@ -25,7 +25,6 @@ export function VotePanel({
   governorAddress,
   proposal,
   milestoneDescription,
-  isArbiter = false,
 }: {
   projectAddress: string;
   governorAddress: string;
@@ -33,8 +32,6 @@ export function VotePanel({
   /** Promesa del hito en votación (solo para propuestas de tipo Hito): lo que el developer se
    *  comprometió a entregar. Es contra esto que el inversor verifica el cumplimiento al votar. */
   milestoneDescription?: string;
-  /** La wallet conectada es el árbitro del proyecto (habilita el desempate). */
-  isArbiter?: boolean;
 }) {
   const { address, isOnSepolia } = useWallet();
   const power = useVotingPower(projectAddress, proposal.governorProposalId, address);
@@ -50,12 +47,10 @@ export function VotePanel({
   // reflejar el VoteCast. Ocultamos los botones de inmediato apenas la firma confirma.
   const [justVoted, setJustVoted] = useState(false);
   const busy = phase === "signing" || phase === "mining" || phase === "propagating";
-  const active = proposal.status === "Active";
-  const expired = isPast(proposal.deadline);
-  // Vencida y sin auto-resolver: cualquiera puede cerrarla (no voto el 100% del poder).
-  const canResolve = active && expired && !justResolved;
-  // Trabada por empate/falta de quorum: solo el arbitro la destraba.
-  const awaitingArbiter = proposal.status === "AwaitingArbiter";
+  // Los campos active/expired/awaitingArbiter vienen del backend (FR-020): no se recalculan.
+  // canResolve combina el flag del backend con el estado local justResolved para evitar
+  // mostrar el botón durante el lag D4 entre la tx confirmada y el siguiente ciclo de polling.
+  const canResolve = proposal.canResolve && !justResolved;
 
   function vote(support: boolean) {
     void run(() => castVote(governorAddress, proposal.governorProposalId, support)).then((ok) => {
@@ -71,15 +66,8 @@ export function VotePanel({
             {KIND_LABEL[proposal.kind]} #
             {proposal.kind === "Milestone" ? proposal.refId + 1 : proposal.refId}
           </CardTitle>
-          <Badge variant={active ? (expired ? "destructive" : "warning") : "secondary"}>
-            {active
-              ? expired
-                ? "Votación vencida"
-                : "En votación"
-              : proposal.status === "AwaitingArbiter"
-                ? "Esperando árbitro"
-                : "Resuelta"}
-          </Badge>
+          {/* Label y variante calculados por el backend (FR-020): el front solo renderiza. */}
+          <Badge variant={proposal.display.variant}>{proposal.display.label}</Badge>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -96,7 +84,7 @@ export function VotePanel({
         )}
 
         {/* Balanza en vivo: A favor/En contra, quórum y cuenta regresiva. */}
-        <VoteProgress proposal={proposal} active={active} expired={expired} />
+        <VoteProgress proposal={proposal} />
 
         {proposal.result !== "None" && (
           <div className="flex items-center justify-between rounded-md bg-[var(--fen-surface)] px-3 py-2 text-sm">
@@ -121,7 +109,7 @@ export function VotePanel({
           </div>
         )}
 
-        {active && !expired && address && isOnSepolia && !power.data?.hasVoted && !justVoted && (
+        {proposal.active && !proposal.expired && address && isOnSepolia && power.data && !power.data.hasVoted && !justVoted && (
           <div className="grid grid-cols-2 gap-2 pt-1">
             <Button variant="brand" disabled={busy} onClick={() => vote(true)}>
               <ThumbsUp className="size-4" /> A favor
@@ -137,7 +125,7 @@ export function VotePanel({
           </div>
         )}
 
-        {active && !expired && justVoted && !power.data?.hasVoted && (
+        {proposal.active && !proposal.expired && justVoted && !power.data?.hasVoted && (
           <p className="pt-2 text-xs text-muted-foreground">
             Voto registrado. Actualizando el estado…
           </p>
@@ -163,13 +151,14 @@ export function VotePanel({
           </div>
         )}
 
-        {active && expired && justResolved && (
+        {proposal.active && proposal.expired && justResolved && (
           <p className="pt-2 text-xs text-muted-foreground">
             Votación cerrada. Actualizando el estado…
           </p>
         )}
 
-        {awaitingArbiter && isArbiter && address && isOnSepolia && (
+        {/* canBreakTie.allowed viene del backend según si la wallet conectada es el árbitro. */}
+        {proposal.awaitingArbiter && proposal.viewer.canBreakTie.allowed && address && isOnSepolia && (
           <div className="space-y-1 pt-2">
             <p className="text-sm font-medium">Desempate del árbitro</p>
             <div className="flex gap-2">

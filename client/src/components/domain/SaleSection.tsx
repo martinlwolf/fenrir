@@ -13,7 +13,7 @@ import {
   claimDistribution,
   executeSale,
 } from "@/lib/chain/contracts";
-import { formatWei, sameAddress } from "@/lib/format";
+import { formatWei } from "@/lib/format";
 import { AddressTag } from "./AddressTag";
 import type { ProjectDetailResponse } from "@shared/schemas/project.schema";
 import type { SaleOfferResponse } from "@shared/schemas/sale.schema";
@@ -22,12 +22,10 @@ function OfferRow({
   offer,
   governorAddress,
   projectAddress,
-  developerWallet,
 }: {
   offer: SaleOfferResponse;
   governorAddress: string;
   projectAddress: string;
-  developerWallet: string;
 }) {
   const { address, isOnSepolia } = useWallet();
   const { phase, error, run } = useWrite([
@@ -35,15 +33,15 @@ function OfferRow({
     ["proposals", projectAddress],
   ]);
   const busy = phase === "signing" || phase === "mining" || phase === "propagating";
-  const votable = offer.status === "Voting" && offer.proposalId != null;
-  // Voto role-aware: el developer (sin FDT) usa castDeveloperSaleVote; el inversor vota con
-  // su peso por FDT vía castVote. Llamar castDeveloperSaleVote como inversor revierte.
-  const isDeveloper = sameAddress(address, developerWallet);
 
+  // `offer.votable` lo decide el backend (Voting + proposalId valido). El front solo habilita
+  // la accion de voto cuando el DTO lo autoriza.
+  // `offer.viewer.usesDeveloperVote` indica si el votante usa castDeveloperSaleVote (developer)
+  // en lugar de castVote (inversor). El front no necesita conocer el rol directamente.
   function voteOffer(support: boolean) {
     const proposalId = offer.proposalId as number;
     void run(() =>
-      isDeveloper
+      offer.viewer.usesDeveloperVote
         ? castDeveloperSaleVote(governorAddress, proposalId, support)
         : castVote(governorAddress, proposalId, support),
     );
@@ -54,14 +52,14 @@ function OfferRow({
       <div className="space-y-1">
         <div className="flex items-center gap-2">
           <span className="font-medium">{formatWei(offer.amount)}</span>
-          <OfferStatusBadge status={offer.status} />
+          <OfferStatusBadge status={offer.status} display={offer.display} />
         </div>
         <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
           Comprador: <AddressTag address={offer.buyerWallet} />
         </p>
         <TxFeedback phase={phase} error={error} />
       </div>
-      {votable && address && isOnSepolia && (
+      {offer.votable && address && isOnSepolia && (
         <div className="flex gap-2">
           <Button size="sm" disabled={busy} onClick={() => voteOffer(true)}>
             A favor
@@ -157,8 +155,8 @@ function ExecuteSaleBanner({ project }: { project: ProjectDetailResponse }) {
 
 export function SaleSection({ project }: { project: ProjectDetailResponse }) {
   const offers = useOffers(project.address);
-  const hasApproved = offers.data?.some((o) => o.status === "Approved") ?? false;
-  const canExecuteSale = project.status === "Selling" && hasApproved;
+  // El backend decide si la venta puede ejecutarse; el front solo lee la capability del DTO.
+  const canExecuteSale = project.viewer.capabilities.canExecuteSale.allowed;
 
   return (
     <div className="space-y-4">
@@ -181,7 +179,6 @@ export function SaleSection({ project }: { project: ProjectDetailResponse }) {
                 offer={o}
                 governorAddress={project.governorAddress}
                 projectAddress={project.address}
-                developerWallet={project.developerWallet}
               />
             ))
           )}

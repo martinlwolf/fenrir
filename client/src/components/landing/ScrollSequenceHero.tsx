@@ -12,22 +12,36 @@ const FRAME_COUNT = 119;
 const frameSrc = (i: number) =>
   `https://cdn.overflow.nl/modus-sequence-v2/frame${String(i + 1).padStart(3, "0")}.jpg`;
 
-// Cuánto scroll "consume" la secuencia antes de soltar la página. 1 viewport por cada ~24
-// frames da una reproducción fluida sin que se sienta eterno.
+// Cuánto scroll "consume" la secuencia antes de soltar la página.
 const SCRUB_DISTANCE = "500%";
 
+// Descargas simultáneas máximas. 4 es un buen balance: no satura la conexión
+// pero mantiene el pipeline lleno sin que el frame siguiente espere al anterior.
+const MAX_CONCURRENT = 4;
+
 const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(min, n));
+
+// Cuántos frames adelante precargar según la velocidad de conexión estimada.
+// En conexiones lentas precargamos menos para no bloquear el frame actual con
+// descargas de frames lejanos que el usuario no ha llegado todavía.
+function lookahead(): number {
+  const conn = (navigator as any).connection;
+  const type: string = conn?.effectiveType ?? "4g";
+  if (type === "slow-2g" || type === "2g") return 4;
+  if (type === "3g") return 12;
+  return 25;
+}
 
 /**
  * Hero con secuencia de imágenes dirigida por scroll (estilo "scrollytelling").
  *
- * - Al entrar: se ve el frame 1 de fondo con el título encima.
- * - Al scrollear: la sección queda fija (pin) y el scroll hace de "scrubber" que avanza
- *   los 119 frames sobre un canvas, sin que la página se mueva.
- * - Al llegar al último frame: los textos se desvanecen y la sección se libera, así el
- *   scroll continúa normalmente hacia el resto del home.
- *
- * Toda la lógica es de frontend (GSAP ScrollTrigger + canvas), sin tocar la API.
+ * Estrategia de carga:
+ * 1. Frame 0 se encola primero → aparece en pantalla sin esperar al resto.
+ * 2. Los siguientes LOOKAHEAD frames se encolan con prioridad alta.
+ * 3. El resto se encola al final de la cola, cargando de a MAX_CONCURRENT.
+ * 4. Al scrollear, los frames del cursor al cursor+LOOKAHEAD se mueven al
+ *    frente de la cola para que siempre estén listos antes de que el scroll
+ *    llegue ahí.
  */
 export function ScrollSequenceHero() {
   const sectionRef = useRef<HTMLElement>(null);
@@ -40,13 +54,18 @@ export function ScrollSequenceHero() {
     const ctx = canvas?.getContext("2d");
     if (!canvas || !ctx) return;
 
-    const images: HTMLImageElement[] = [];
+    // images[i] es null mientras no haya cargado.
+    const images = new Array<HTMLImageElement | null>(FRAME_COUNT).fill(null);
     const state = { frame: 0 };
 
-    // Dibuja el frame actual cubriendo el canvas (object-fit: cover) y centrado.
+    const loaded = new Set<number>();
+    const inFlight = new Set<number>();
+    const queue: number[] = [];
+    const LOOKAHEAD = lookahead();
+
     const draw = () => {
       const img = images[clamp(Math.round(state.frame), 0, FRAME_COUNT - 1)];
-      if (!img || !img.complete || !img.naturalWidth) return;
+      if (!img) return;
       const cw = canvas.clientWidth;
       const ch = canvas.clientHeight;
       const scale = Math.max(cw / img.naturalWidth, ch / img.naturalHeight);
@@ -56,7 +75,6 @@ export function ScrollSequenceHero() {
       ctx.drawImage(img, (cw - w) / 2, (ch - h) / 2, w, h);
     };
 
-    // El canvas se dibuja en píxeles CSS pero respaldado por la densidad real del display.
     const resize = () => {
       const dpr = window.devicePixelRatio || 1;
       canvas.width = canvas.clientWidth * dpr;
@@ -65,18 +83,63 @@ export function ScrollSequenceHero() {
       draw();
     };
 
-    // Precarga de todos los frames. El primero, apenas llega, ya se pinta de fondo.
-    let loaded = 0;
-    for (let i = 0; i < FRAME_COUNT; i++) {
+    // Arranca la descarga real de un frame y lo registra en images[] al terminar.
+    const startLoad = (i: number) => {
+      inFlight.add(i);
       const img = new Image();
       img.src = frameSrc(i);
       img.onload = () => {
-        loaded++;
+        images[i] = img;
+        inFlight.delete(i);
+        loaded.add(i);
         if (i === 0) draw();
-        if (loaded === FRAME_COUNT) ScrollTrigger.refresh();
+        if (loaded.size === FRAME_COUNT) ScrollTrigger.refresh();
+        pump();
       };
-      images[i] = img;
-    }
+      img.onerror = () => {
+        inFlight.delete(i);
+        pump();
+      };
+    };
+
+    // Consume la cola respetando el límite de concurrencia.
+    const pump = () => {
+      while (inFlight.size < MAX_CONCURRENT && queue.length > 0) {
+        const i = queue.shift()!;
+        if (!loaded.has(i) && !inFlight.has(i)) startLoad(i);
+      }
+    };
+
+    // Agrega un frame a la cola si todavía no está cargado ni en vuelo.
+    const enqueue = (i: number, front = false) => {
+      if (loaded.has(i) || inFlight.has(i) || queue.includes(i)) return;
+      if (front) queue.unshift(i);
+      else queue.push(i);
+    };
+
+    // Cuando el scroll llega al frame `frameIdx`, mueve el rango
+    // [frameIdx, frameIdx+LOOKAHEAD] al frente de la cola para que se
+    // descarguen con prioridad sobre frames más lejanos.
+    const prioritizeAround = (frameIdx: number) => {
+      const until = Math.min(frameIdx + LOOKAHEAD, FRAME_COUNT - 1);
+      const priority = new Set<number>();
+      for (let i = frameIdx; i <= until; i++) priority.add(i);
+
+      const front = queue.filter((i) => priority.has(i));
+      const rest = queue.filter((i) => !priority.has(i));
+      queue.length = 0;
+      queue.push(...front, ...rest);
+
+      // Encola frames del rango que todavía no hayan entrado a la cola.
+      for (let i = frameIdx; i <= until; i++) enqueue(i, true);
+      pump();
+    };
+
+    // Arranque: frame 0 primero → primeros LOOKAHEAD en alta prioridad → resto al fondo.
+    enqueue(0, true);
+    for (let i = 1; i <= Math.min(LOOKAHEAD, FRAME_COUNT - 1); i++) enqueue(i, true);
+    for (let i = LOOKAHEAD + 1; i < FRAME_COUNT; i++) enqueue(i);
+    pump();
 
     resize();
     window.addEventListener("resize", resize);
@@ -100,10 +163,23 @@ export function ScrollSequenceHero() {
     });
 
     // Línea de tiempo normalizada a [0, 1]:
-    // 0.00 → 1.00  reproduce la secuencia de frames.
+    // 0.00 → 1.00  reproduce la secuencia de frames + reordena la cola de carga.
     // 0.00 → 0.06  desaparece el indicador de scroll apenas arranca.
     // 0.78 → 1.00  se van los textos justo al llegar a los últimos frames.
-    tl.to(state, { frame: FRAME_COUNT - 1, duration: 1, ease: "none", snap: "frame", onUpdate: draw }, 0);
+    tl.to(
+      state,
+      {
+        frame: FRAME_COUNT - 1,
+        duration: 1,
+        ease: "none",
+        snap: "frame",
+        onUpdate: () => {
+          draw();
+          prioritizeAround(Math.round(state.frame));
+        },
+      },
+      0,
+    );
     tl.to(hintRef.current, { autoAlpha: 0, duration: 0.06, ease: "none" }, 0);
     tl.to(overlayRef.current, { autoAlpha: 0, y: -60, duration: 0.22, ease: "power1.in" }, 0.78);
 

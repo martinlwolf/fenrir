@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { CheckCircle2, Gavel, Vote, XCircle } from "lucide-react";
 import { useMyProposalsFeed } from "@/hooks/useMyVotableProposals";
+import { useWallet } from "@/providers/WalletProvider";
 import { shortAddress, timeRemaining } from "@/lib/format";
 import type {
   ProposalKindValue,
@@ -33,41 +34,60 @@ interface Seen {
 // historial al cargar).
 export function VoteNotifications() {
   const { data } = useMyProposalsFeed();
+  const { address } = useWallet();
   const navigate = useNavigate();
-  const prev = useRef<Map<string, Seen>>(new Map());
-  const openNotified = useRef<Set<string>>(new Set());
+  // Colecciones estables entre renders (via ref): ultimo estado visto y votaciones abiertas ya avisadas.
+  const lastSeen = useRef<Map<string, Seen>>(new Map()).current;
+  const notifiedOpen = useRef<Set<string>>(new Set()).current;
   const arbiterNotified = useRef<Set<string>>(new Set());
+  // Wallet para la que ya se sembro el feed (null = todavia no): evita spamear el historial al cargar.
+  const seededFor = useRef<string | null>(null);
   const initialized = useRef(false);
 
   useEffect(() => {
     if (!data) return;
+    const wallet = address ?? null;
+
+    // Siembra silenciosa al primer feed de esta wallet: registra lo existente SIN avisar.
+    // De ahi en mas, solo lo nuevo dispara toast.
+    if (seededFor.current !== wallet) {
+      notifiedOpen.clear();
+      lastSeen.clear();
+      for (const { proposal, projectAddress } of data) {
+        const key = `${projectAddress}:${proposal.governorProposalId}`;
+        lastSeen.set(key, { status: proposal.status, result: proposal.result });
+        if (proposal.status === "Active") notifiedOpen.add(key);
+      }
+      seededFor.current = wallet;
+      initialized.current = true;
+      return;
+    }
 
     for (const { proposal, projectAddress, canVote, isArbiter } of data) {
       const key = `${projectAddress}:${proposal.governorProposalId}`;
-      const before = prev.current.get(key);
+      const before = lastSeen.get(key);
       const kind = KIND_LABEL[proposal.kind];
       const isOpen = proposal.status === "Active";
 
-      // 1) Votacion abierta: avisar UNA vez a este inversor (pueda votar o no).
-      if (isOpen && !openNotified.current.has(key)) {
-        openNotified.current.add(key);
+      // 1) Votacion NUEVA recien abierta (no estaba en el set de conocidas).
+      if (isOpen && !notifiedOpen.has(key)) {
+        notifiedOpen.add(key);
         toast(`Votación abierta · ${kind}`, {
           id: `${key}:open`,
           icon: <Vote className="size-4" />,
           description: canVote
             ? `Proyecto ${shortAddress(projectAddress)} · cierra en ${timeRemaining(proposal.deadline)}`
             : `Proyecto ${shortAddress(projectAddress)} · no tenés poder de voto en este snapshot`,
-          duration: Infinity,
+          duration: 30000,
           action: {
             label: canVote ? "Ir a votar" : "Ver",
             onClick: () => navigate(`/projects/${projectAddress}?tab=governance`),
           },
         });
       }
-      // Cuando deja de estar abierta, sacamos el toast de "abierta".
-      if (!isOpen && openNotified.current.has(key)) {
+      if (!isOpen && notifiedOpen.has(key)) {
         toast.dismiss(`${key}:open`);
-        openNotified.current.delete(key);
+        notifiedOpen.delete(key);
       }
 
       // 2) Trabada esperando desempate: avisar UNA vez, solo si la wallet es el arbitro.
@@ -118,12 +138,9 @@ export function VoteNotifications() {
         }
       }
 
-      prev.current.set(key, { status: proposal.status, result: proposal.result });
+      lastSeen.set(key, { status: proposal.status, result: proposal.result });
     }
-
-    // A partir del primer feed completo, las proximas transiciones ya se notifican.
-    initialized.current = true;
-  }, [data, navigate]);
+  }, [data, navigate, address]);
 
   return null;
 }
