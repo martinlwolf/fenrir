@@ -8,8 +8,8 @@ import { VoteProgress } from "./VoteProgress";
 import { useWallet } from "@/providers/WalletProvider";
 import { useVotingPower } from "@/hooks/useProposals";
 import { useWrite } from "@/hooks/useWrite";
-import { arbiterDecide, castVote, resolve } from "@/lib/chain/contracts";
-import { formatWei } from "@/lib/format";
+import { arbiterDecide, castDeveloperSaleVote, castVote, resolve } from "@/lib/chain/contracts";
+import { formatWei, sameAddress } from "@/lib/format";
 import type { ProposalResponse } from "@shared/schemas/proposal.schema";
 
 const KIND_LABEL = {
@@ -23,11 +23,13 @@ const KIND_LABEL = {
 export function VotePanel({
   projectAddress,
   governorAddress,
+  developerWallet,
   proposal,
   milestoneDescription,
 }: {
   projectAddress: string;
   governorAddress: string;
+  developerWallet: string;
   proposal: ProposalResponse;
   /** Promesa del hito en votación (solo para propuestas de tipo Hito): lo que el developer se
    *  comprometió a entregar. Es contra esto que el inversor verifica el cumplimiento al votar. */
@@ -35,6 +37,10 @@ export function VotePanel({
 }) {
   const { address, isOnSepolia } = useWallet();
   const power = useVotingPower(projectAddress, proposal.governorProposalId, address);
+  // En una oferta de venta, el desarrollador vota con castDeveloperSaleVote (peso fijo, sin
+  // FDT): ver business_rules/venta-y-reparto.md. El backend ya refleja su poder de voto en
+  // power.data (governance.service.ts); aca solo elegimos que funcion firmar.
+  const isDeveloperSaleVote = proposal.kind === "SaleOffer" && sameAddress(developerWallet, address);
   const { phase, error, run } = useWrite([
     ["proposals", projectAddress],
     ["voting-power", projectAddress, proposal.governorProposalId, address],
@@ -46,16 +52,33 @@ export function VotePanel({
   // Mismo lag D4 al votar: hasVoted sale del espejo del backend, que tarda un ciclo en
   // reflejar el VoteCast. Ocultamos los botones de inmediato apenas la firma confirma.
   const [justVoted, setJustVoted] = useState(false);
+  // Mismo lag D4 al desempatar: awaitingArbiter sale del espejo del backend y tarda un
+  // ciclo en pasar a Resolved. Sin esto los botones de desempate seguian visibles tras
+  // decidir y un segundo click revertia (la propuesta ya no esta AwaitingArbiter).
+  const [justDecided, setJustDecided] = useState(false);
   const busy = phase === "signing" || phase === "mining" || phase === "propagating";
   // Los campos active/expired/awaitingArbiter vienen del backend (FR-020): no se recalculan.
   // canResolve combina el flag del backend con el estado local justResolved para evitar
   // mostrar el botón durante el lag D4 entre la tx confirmada y el siguiente ciclo de polling.
   const canResolve = proposal.canResolve && !justResolved;
+  const awaitingArbiter = proposal.awaitingArbiter && !justDecided;
 
   function vote(support: boolean) {
-    void run(() => castVote(governorAddress, proposal.governorProposalId, support)).then((ok) => {
+    void run(() =>
+      isDeveloperSaleVote
+        ? castDeveloperSaleVote(governorAddress, proposal.governorProposalId, support)
+        : castVote(governorAddress, proposal.governorProposalId, support),
+    ).then((ok) => {
       if (ok) setJustVoted(true);
     });
+  }
+
+  function decide(approve: boolean) {
+    void run(() => arbiterDecide(governorAddress, proposal.governorProposalId, approve)).then(
+      (ok) => {
+        if (ok) setJustDecided(true);
+      },
+    );
   }
 
   return (
@@ -109,7 +132,7 @@ export function VotePanel({
           </div>
         )}
 
-        {proposal.active && !proposal.expired && address && isOnSepolia && power.data && !power.data.hasVoted && !justVoted && (
+        {proposal.active && !proposal.expired && address && isOnSepolia && power.data?.canVote && !justVoted && (
           <div className="grid grid-cols-2 gap-2 pt-1">
             <Button variant="brand" disabled={busy} onClick={() => vote(true)}>
               <ThumbsUp className="size-4" /> A favor
@@ -158,31 +181,23 @@ export function VotePanel({
         )}
 
         {/* canBreakTie.allowed viene del backend según si la wallet conectada es el árbitro. */}
-        {proposal.awaitingArbiter && proposal.viewer.canBreakTie.allowed && address && isOnSepolia && (
+        {awaitingArbiter && proposal.viewer.canBreakTie.allowed && address && isOnSepolia && (
           <div className="space-y-1 pt-2">
             <p className="text-sm font-medium">Desempate del árbitro</p>
             <div className="flex gap-2">
-              <Button
-                size="sm"
-                disabled={busy}
-                onClick={() =>
-                  void run(() => arbiterDecide(governorAddress, proposal.governorProposalId, true))
-                }
-              >
+              <Button size="sm" disabled={busy} onClick={() => decide(true)}>
                 Aprobar
               </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={busy}
-                onClick={() =>
-                  void run(() => arbiterDecide(governorAddress, proposal.governorProposalId, false))
-                }
-              >
+              <Button size="sm" variant="outline" disabled={busy} onClick={() => decide(false)}>
                 Rechazar
               </Button>
             </div>
           </div>
+        )}
+        {proposal.awaitingArbiter && justDecided && (
+          <p className="pt-2 text-xs text-muted-foreground">
+            Decisión registrada. Actualizando el estado…
+          </p>
         )}
         <TxFeedback phase={phase} error={error} />
       </CardContent>

@@ -24,3 +24,11 @@ export const RESOLVER_DEADLINE_BUFFER_MS = 15_000;
 export const QUORUM_BPS = 5100;  // 51 %
 export const APPROVAL_THRESHOLD_BPS = 5100;  // 51 %
 export const BPS_DENOMINATOR = 10000;
+
+/**
+ * Peso fijo del voto del desarrollador en una oferta de venta (castDeveloperSaleVote):
+ * el mismo que 1 FDT, sin veto ni peso especial. El desarrollador no tiene FDT (no puede
+ * invertir en su propio proyecto) asi que getPastVotes siempre le da 0 -- este peso no sale
+ * del token, hay que espejarlo a mano.
+ */
+export const DEVELOPER_SALE_VOTE_WEIGHT = 10n ** 18n;  // 1 ether

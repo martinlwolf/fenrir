@@ -169,7 +169,9 @@ export function SaleSection({ project }: { project: ProjectDetailResponse }) {
       <Card>
         <CardHeader className="flex-row items-center justify-between pb-2">
           <CardTitle className="text-base">Ofertas de compra</CardTitle>
-          <MakeOfferDialog projectAddress={project.address} />
+          {/* submitOffer() exige status == Selling (FenrirProject.sol:432): una vez ejecutada
+              la venta (salePrice fijado, status pasa a Completed) ya no hay nada que ofertar. */}
+          {!project.salePrice && <MakeOfferDialog projectAddress={project.address} />}
         </CardHeader>
         <CardContent>
           {offers.isLoading ? (

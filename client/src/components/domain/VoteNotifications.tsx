@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { CheckCircle2, Gavel, Vote, XCircle } from "lucide-react";
 import { useMyProposalsFeed } from "@/hooks/useMyVotableProposals";
@@ -36,6 +36,18 @@ export function VoteNotifications() {
   const { data } = useMyProposalsFeed();
   const { address } = useWallet();
   const navigate = useNavigate();
+  const location = useLocation();
+  // Si el destino del toast es la pagina en la que ya estamos, react-router no dispara
+  // ningun re-render util (misma ruta): recargamos para que se vea el estado real.
+  const goTo = (path: string) => {
+    const [pathname, search = ""] = path.split("?");
+    const currentSearch = location.search.replace(/^\?/, "");
+    if (location.pathname === pathname && currentSearch === search) {
+      window.location.reload();
+    } else {
+      navigate(path);
+    }
+  };
   // Colecciones estables entre renders (via ref): ultimo estado visto y votaciones abiertas ya avisadas.
   const lastSeen = useRef<Map<string, Seen>>(new Map()).current;
   const notifiedOpen = useRef<Set<string>>(new Set()).current;
@@ -81,7 +93,7 @@ export function VoteNotifications() {
           duration: 30000,
           action: {
             label: canVote ? "Ir a votar" : "Ver",
-            onClick: () => navigate(`/projects/${projectAddress}?tab=governance`),
+            onClick: () => goTo(`/projects/${projectAddress}?tab=governance`),
           },
         });
       }
@@ -101,7 +113,7 @@ export function VoteNotifications() {
           duration: Infinity,
           action: {
             label: "Ir a desempatar",
-            onClick: () => navigate(`/projects/${projectAddress}?tab=governance`),
+            onClick: () => goTo(`/projects/${projectAddress}?tab=governance`),
           },
         });
       }
@@ -118,7 +130,7 @@ export function VoteNotifications() {
         before.status !== "Resolved" &&
         proposal.status === "Resolved";
       if (justResolved) {
-        const goToProject = () => navigate(`/projects/${projectAddress}`);
+        const goToProject = () => goTo(`/projects/${projectAddress}`);
         if (proposal.result === "Approved") {
           toast.success(`${kind} · aprobada ✅`, {
             id: `${key}:resolved`,

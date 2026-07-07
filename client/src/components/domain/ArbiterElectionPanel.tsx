@@ -13,6 +13,7 @@ import {
 import { TxFeedback } from "./TxFeedback";
 import { useWallet } from "@/providers/WalletProvider";
 import { useWrite } from "@/hooks/useWrite";
+import { useVotingPower } from "@/hooks/useProposals";
 import { useProjectInvestors } from "@/hooks/useProjectInvestors";
 import { castElectionVote, resolve } from "@/lib/chain/contracts";
 import { shortAddress, timeRemaining } from "@/lib/format";
@@ -34,7 +35,11 @@ export function ArbiterElectionPanel({
   proposal: ProposalResponse;
 }) {
   const { address, isOnSepolia } = useWallet();
-  const { phase, error, run } = useWrite([["proposals", projectAddress]]);
+  const power = useVotingPower(projectAddress, proposal.governorProposalId, address);
+  const { phase, error, run } = useWrite([
+    ["proposals", projectAddress],
+    ["voting-power", projectAddress, proposal.governorProposalId, address],
+  ]);
   const investors = useProjectInvestors(projectAddress);
   const [candidate, setCandidate] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
@@ -42,12 +47,18 @@ export function ArbiterElectionPanel({
   // polling en reflejarlo (D4): ocultamos el boton de inmediato para no mostrarlo junto al
   // "confirmado"; el polling de useProposals termina de actualizar el estado.
   const [justResolved, setJustResolved] = useState(false);
+  // Mismo lag D4 al votar: hasVoted sale del espejo del backend, que tarda un ciclo en
+  // reflejar el VoteCast. Sin esto el form seguia visible tras votar y un segundo click
+  // revertia con "not active" (la eleccion ya habia resuelto en cadena).
+  const [justVoted, setJustVoted] = useState(false);
   const busy = phase === "signing" || phase === "mining" || phase === "propagating";
   // active/expired vienen del backend (FR-020): no se recalculan.
   // canResolve combina el flag del backend con justResolved para cubrir el lag D4.
   const canResolve = proposal.canResolve && !justResolved;
   const candidates = investors.data ?? [];
   const hasCandidates = candidates.length > 0;
+  const alreadyVoted = power.data?.hasVoted || justVoted;
+  const canVote = power.data?.canVote && !justVoted;
 
   function vote() {
     setFormError(null);
@@ -55,7 +66,11 @@ export function ArbiterElectionPanel({
       setFormError("Elegí un candidato o ingresá una dirección válida (0x…).");
       return;
     }
-    void run(() => castElectionVote(governorAddress, proposal.governorProposalId, candidate));
+    void run(() => castElectionVote(governorAddress, proposal.governorProposalId, candidate)).then(
+      (ok) => {
+        if (ok) setJustVoted(true);
+      },
+    );
   }
 
   return (
@@ -75,7 +90,7 @@ export function ArbiterElectionPanel({
         {proposal.electedArbiter && (
           <p className="text-sm">Árbitro electo: {proposal.electedArbiter}</p>
         )}
-        {proposal.active && address && isOnSepolia && (
+        {proposal.active && !proposal.expired && address && isOnSepolia && canVote && (
           <div className="space-y-2">
             <Label htmlFor="candidate">Candidato (inversor del proyecto)</Label>
             {hasCandidates ? (
@@ -112,6 +127,11 @@ export function ArbiterElectionPanel({
               {busy ? "Procesando…" : "Votar candidato"}
             </Button>
           </div>
+        )}
+        {proposal.active && !proposal.expired && alreadyVoted && (
+          <p className="text-xs text-muted-foreground">
+            {power.data?.hasVoted ? "Ya votaste en esta elección." : "Voto registrado. Actualizando el estado…"}
+          </p>
         )}
         {canResolve && address && isOnSepolia && (
           <Button

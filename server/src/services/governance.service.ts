@@ -7,6 +7,7 @@ import type {
 } from "@shared/schemas/proposal.schema";
 import { NotFoundException } from "../exceptions/common.exception";
 import { tokenContract } from "../models/onchain/provider";
+import { DEVELOPER_SALE_VOTE_WEIGHT } from "../config/constants";
 import { APPROVAL_THRESHOLD_BPS, QUORUM_BPS } from "../models/Proposal";
 import { buildViewer } from "../policy/Viewer";
 import { proposalCapabilities, proposalDerived } from "../policy/ProposalPolicy";
@@ -128,19 +129,28 @@ export class GovernanceService {
     const ctx = await this.projects.getVotingContext(projectAddress);
     if (!ctx) throw new NotFoundException("Project not found");
 
-    const token = tokenContract(ctx.tokenAddress);
-    const pastVotes = (await token.getPastVotes(wallet, meta.snapshotBlock)) as bigint;
-    // En modo "1 wallet = 1 voto" el peso es 1 si tenia algun FDT en el snapshot.
-    const votingPower =
-      ctx.votingMode === "OneWalletOneVote" ? (pastVotes > 0n ? 1n : 0n) : pastVotes;
-
-    const hasVoted = await this.votes.hasVoted(meta.id, wallet);
-
-    // Para calcular canVote necesitamos el estado actual de la propuesta.
+    // Necesitamos la propuesta ya aca: el desarrollador vota una oferta de venta con un peso
+    // fijo (castDeveloperSaleVote), ajeno al balance de FDT que nunca tiene (no puede invertir
+    // en su propio proyecto). Sin este caso especial, getPastVotes le da 0 y queda bloqueado.
     const proposal = await this.proposals.findByProjectAndProposalId(
       projectAddress,
       governorProposalId,
     );
+    const isDeveloperSaleVote =
+      proposal?.kind === "SaleOffer" && wallet.toLowerCase() === ctx.developerWallet.toLowerCase();
+
+    let votingPower: bigint;
+    if (isDeveloperSaleVote) {
+      votingPower = DEVELOPER_SALE_VOTE_WEIGHT;
+    } else {
+      const token = tokenContract(ctx.tokenAddress);
+      const pastVotes = (await token.getPastVotes(wallet, meta.snapshotBlock)) as bigint;
+      // En modo "1 wallet = 1 voto" el peso es 1 si tenia algun FDT en el snapshot.
+      votingPower = ctx.votingMode === "OneWalletOneVote" ? (pastVotes > 0n ? 1n : 0n) : pastVotes;
+    }
+
+    const hasVoted = await this.votes.hasVoted(meta.id, wallet);
+
     // Si la propuesta no existe en el espejo, ya fallamos arriba en getMeta; aqui es seguro
     // asumir que existe. Si por alguna razon no se mapeo a modelo, canVote = false.
     let canVote = false;

@@ -38,6 +38,10 @@ export class Proposal {
     return this.props.governorProposalId;
   }
 
+  get kind(): ProposalKindValue {
+    return this.props.kind;
+  }
+
   get deadline(): Date {
     return this.props.deadline;
   }

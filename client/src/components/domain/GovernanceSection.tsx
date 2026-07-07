@@ -47,6 +47,7 @@ export function GovernanceSection({ project }: { project: ProjectDetailResponse 
               key={proposal.governorProposalId}
               projectAddress={project.address}
               governorAddress={project.governorAddress}
+              developerWallet={project.developerWallet}
               proposal={proposal}
               // En una propuesta de Hito, refId es el indice del hito: pasamos su promesa para
               // que el inversor vea contra que verifica el cumplimiento al votar.

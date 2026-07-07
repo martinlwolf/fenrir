@@ -194,13 +194,23 @@ export class ProjectRepository {
   // Contexto necesario para calcular el poder de voto de una wallet.
   async getVotingContext(
     projectAddress: string,
-  ): Promise<{ tokenAddress: string; votingMode: VotingModeValue; status: ProjectStatusValue } | null> {
+  ): Promise<{
+    tokenAddress: string;
+    votingMode: VotingModeValue;
+    status: ProjectStatusValue;
+    developerWallet: string;
+  } | null> {
     const row = await this.db.project.findUnique({
       where: { address: projectAddress.toLowerCase() },
-      select: { tokenAddress: true, votingMode: true, status: true },
+      select: { tokenAddress: true, votingMode: true, status: true, developerWallet: true },
     });
     return row
-      ? { tokenAddress: row.tokenAddress, votingMode: row.votingMode, status: row.status }
+      ? {
+          tokenAddress: row.tokenAddress,
+          votingMode: row.votingMode,
+          status: row.status,
+          developerWallet: row.developerWallet,
+        }
       : null;
   }
 }
