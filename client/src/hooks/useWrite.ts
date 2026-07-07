@@ -4,6 +4,7 @@
 import * as React from "react";
 import { useQueryClient, type QueryKey } from "@tanstack/react-query";
 import type { TransactionResponse } from "ethers";
+import { translateContractError } from "@shared/chain/translateContractError";
 
 export type TxPhase = "idle" | "signing" | "mining" | "propagating" | "confirmed" | "failed";
 
@@ -58,9 +59,9 @@ export function useWrite(invalidateKeys: QueryKey[] = []): UseWriteResult {
 }
 
 function messageFromError(err: unknown): string {
-  const e = err as { code?: string | number; shortMessage?: string; message?: string };
+  const e = err as { code?: string | number };
   if (e?.code === "ACTION_REJECTED" || e?.code === 4001) {
     return "Rechazaste la firma en la wallet.";
   }
-  return e?.shortMessage ?? e?.message ?? "La transacción falló.";
+  return translateContractError(err);
 }

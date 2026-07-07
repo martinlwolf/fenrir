@@ -9,6 +9,7 @@ El último hito de la lista es siempre la venta del inmueble. A diferencia del r
 - Usa el mismo quórum y umbral que el resto de los hitos del proyecto — no tiene parámetros de votación propios.
 - Puede haber **varias ofertas con votación en curso al mismo tiempo**. Si más de una llega a aprobarse, se ejecuta la de mayor precio entre las aprobadas; las demás (aprobadas o todavía en votación) quedan descartadas una vez que la venta se concreta.
 - Quien hace una oferta es el rol de **comprador** (ver [roles.md](roles.md)). Cada oferta requiere depositar el monto ofertado en el contrato; si no resulta elegida (rechazada en su votación, o superada por una mejor oferta aprobada), el depósito se reembolsa automáticamente.
+- Si la votación de una oferta queda esperando al árbitro (falta de quórum persistente o empate) y este no decide dentro de su ventana de 1 día, cualquiera puede reclamar el reembolso de esa oferta puntual — no hace falta esperar indefinidamente a un árbitro que no aparece. Las demás ofertas, si las hay, no se ven afectadas (ver [casos-borde.md](casos-borde.md)).
 
 ## Reparto entre los inversores, una vez aprobada la venta
 

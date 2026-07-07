@@ -453,6 +453,18 @@ contract FenrirProject is ReentrancyGuard, IFenrirProjectCallback {
         emit SaleOfferRefunded(offerId, amount);
     }
 
+    /// Cualquiera puede llamarla si la votacion de una oferta quedo esperando al arbitro y
+    /// este no decidio dentro de su ventana (ver FenrirGovernor.isArbiterTimedOut). A
+    /// diferencia de un hito trabado, esto no cancela el proyecto: reembolsa solo esa
+    /// oferta puntual y las demas (si las hay) siguen su votacion normalmente.
+    function cancelStalledOffer(uint256 offerId) external nonReentrant {
+        SaleOffer storage offer = saleOffers[offerId];
+        require(offer.status == OfferStatus.Voting, "FenrirProject: offer not voting");
+        require(governor.isArbiterTimedOut(offer.proposalId), "FenrirProject: offer not stalled");
+        offer.status = OfferStatus.Refunded;
+        _refundOffer(offerId);
+    }
+
     /// Concreta la venta con la mejor oferta aprobada hasta el momento. Exige que
     /// cualquier otra oferta ya haya terminado de votarse -- no fuerza el descarte de una
     /// oferta todavia en votacion que podria terminar pagando mas.
