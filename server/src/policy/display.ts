@@ -29,8 +29,19 @@ const OFFER_DISPLAY: Record<OfferStatusValue, Display> = {
   Executed: { label: "Ejecutada", variant: "brand" },
 };
 
-export function offerDisplay(status: OfferStatusValue): Display {
-  return OFFER_DISPLAY[status];
+export interface OfferDisplayInput {
+  status: OfferStatusValue;
+  /** La votacion ya vencio pero todavia no se resolvio on-chain (sigue en estado Voting). */
+  votingExpired?: boolean;
+}
+
+export function offerDisplay(input: OfferDisplayInput): Display {
+  // Caso derivado PRIMERO (espeja milestoneDisplay): el estado on-chain crudo ("Voting") no
+  // alcanza para describir que el plazo ya paso y solo falta que alguien llame resolve().
+  if (input.status === "Voting" && input.votingExpired) {
+    return { label: "Votación vencida", variant: "destructive" };
+  }
+  return OFFER_DISPLAY[input.status];
 }
 
 const MILESTONE_DISPLAY: Record<MilestoneStatusValue, Display> = {
@@ -45,10 +56,17 @@ export interface ProposalDisplayInput {
   active: boolean;
   expired: boolean;
   awaitingArbiter: boolean;
+  /** El proyecto dueño de la propuesta ya se canceló o completó (ver proposalDerived). */
+  projectClosed?: boolean;
 }
 
 // Labels de estado de propuesta. Replica la logica hardcodeada en VotePanel.tsx:74-81.
 export function proposalDisplay(input: ProposalDisplayInput): Display {
+  // Caso derivado PRIMERO: el proyecto ya terminó, así que esta propuesta quedó sin efecto
+  // aunque el espejo todavía la marque Active/AwaitingArbiter (nadie llamó resolve()).
+  if (input.projectClosed) {
+    return { label: "Proyecto finalizado", variant: "secondary" };
+  }
   if (input.awaitingArbiter) {
     return { label: "Esperando árbitro", variant: "warning" };
   }

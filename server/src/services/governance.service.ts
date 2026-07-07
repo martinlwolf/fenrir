@@ -41,17 +41,20 @@ export class GovernanceService {
     const proposalList = await this.proposals.listByProject(projectAddress);
 
     return proposalList.map((p) => {
-      const derived = proposalDerived({
-        status: p.status,
-        deadline: p.deadline,
-        votesFor: p.votesFor,
-        votesAgainst: p.votesAgainst,
-        weightVoted: p.weightVoted,
-        totalPowerAtSnapshot: p.totalPowerAtSnapshot,
-        quorumBps: QUORUM_BPS,
-        approvalThresholdBps: APPROVAL_THRESHOLD_BPS,
-        quorumReached: p.quorumReached,
-      });
+      const derived = proposalDerived(
+        {
+          status: p.status,
+          deadline: p.deadline,
+          votesFor: p.votesFor,
+          votesAgainst: p.votesAgainst,
+          weightVoted: p.weightVoted,
+          totalPowerAtSnapshot: p.totalPowerAtSnapshot,
+          quorumBps: QUORUM_BPS,
+          approvalThresholdBps: APPROVAL_THRESHOLD_BPS,
+          quorumReached: p.quorumReached,
+        },
+        project.status,
+      );
 
       const caps = proposalCapabilities(derived, viewer);
 
@@ -88,17 +91,20 @@ export class GovernanceService {
       viewerWallet,
     );
 
-    const derived = proposalDerived({
-      status: proposal.status,
-      deadline: proposal.deadline,
-      votesFor: proposal.votesFor,
-      votesAgainst: proposal.votesAgainst,
-      weightVoted: proposal.weightVoted,
-      totalPowerAtSnapshot: proposal.totalPowerAtSnapshot,
-      quorumBps: QUORUM_BPS,
-      approvalThresholdBps: APPROVAL_THRESHOLD_BPS,
-      quorumReached: proposal.quorumReached,
-    });
+    const derived = proposalDerived(
+      {
+        status: proposal.status,
+        deadline: proposal.deadline,
+        votesFor: proposal.votesFor,
+        votesAgainst: proposal.votesAgainst,
+        weightVoted: proposal.weightVoted,
+        totalPowerAtSnapshot: proposal.totalPowerAtSnapshot,
+        quorumBps: QUORUM_BPS,
+        approvalThresholdBps: APPROVAL_THRESHOLD_BPS,
+        quorumReached: proposal.quorumReached,
+      },
+      project.status,
+    );
 
     const caps = proposalCapabilities(derived, viewer);
 
@@ -139,17 +145,20 @@ export class GovernanceService {
     // asumir que existe. Si por alguna razon no se mapeo a modelo, canVote = false.
     let canVote = false;
     if (proposal) {
-      const derived = proposalDerived({
-        status: proposal.status,
-        deadline: proposal.deadline,
-        votesFor: proposal.votesFor,
-        votesAgainst: proposal.votesAgainst,
-        weightVoted: proposal.weightVoted,
-        totalPowerAtSnapshot: proposal.totalPowerAtSnapshot,
-        quorumBps: QUORUM_BPS,
-        approvalThresholdBps: APPROVAL_THRESHOLD_BPS,
-        quorumReached: proposal.quorumReached,
-      });
+      const derived = proposalDerived(
+        {
+          status: proposal.status,
+          deadline: proposal.deadline,
+          votesFor: proposal.votesFor,
+          votesAgainst: proposal.votesAgainst,
+          weightVoted: proposal.weightVoted,
+          totalPowerAtSnapshot: proposal.totalPowerAtSnapshot,
+          quorumBps: QUORUM_BPS,
+          approvalThresholdBps: APPROVAL_THRESHOLD_BPS,
+          quorumReached: proposal.quorumReached,
+        },
+        ctx.status,
+      );
       canVote = votingPower > 0n && !hasVoted && derived.active && !derived.expired;
     }
 

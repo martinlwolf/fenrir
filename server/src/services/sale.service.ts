@@ -12,6 +12,7 @@ import { NotFoundException } from "../exceptions/common.exception";
 import { projectContract, tokenContract } from "../models/onchain/provider";
 import { InvestmentRepository, investmentRepository } from "../persistence/repositories/investment.repository";
 import { ProjectRepository, projectRepository } from "../persistence/repositories/project.repository";
+import { ProposalRepository, proposalRepository } from "../persistence/repositories/proposal.repository";
 import { SaleOfferRepository, saleOfferRepository } from "../persistence/repositories/saleOffer.repository";
 import { offerViewerFields } from "../policy/SalePolicy";
 import { buildViewer } from "../policy/Viewer";
@@ -43,6 +44,7 @@ export class SaleService {
     private readonly offers: SaleOfferRepository = saleOfferRepository,
     private readonly projects: ProjectRepository = projectRepository,
     private readonly investments: InvestmentRepository = investmentRepository,
+    private readonly proposals: ProposalRepository = proposalRepository,
   ) { }
 
   // Devuelve las ofertas enriquecidas con display, votable y campos del viewer. Necesita el
@@ -62,11 +64,26 @@ export class SaleService {
       { investments: this.investments },
     );
 
-    const offers = await this.offers.listByProject(projectAddress);
+    const [offers, deadlines] = await Promise.all([
+      this.offers.listByProject(projectAddress),
+      this.proposalDeadlines(projectAddress),
+    ]);
     return offers.map((o) => {
       const base = o.toResponse();
-      return { ...base, ...offerViewerFields({ status: base.status, proposalId: base.proposalId }, viewer) };
+      const deadline = base.proposalId != null ? (deadlines.get(base.proposalId) ?? null) : null;
+      return {
+        ...base,
+        ...offerViewerFields({ status: base.status, proposalId: base.proposalId }, viewer, deadline),
+      };
     });
+  }
+
+  // Mapa governorProposalId -> deadline de las propuestas del proyecto. Misma logica que
+  // ProjectService.proposalDeadlines (project.service.ts): la usa SalePolicy para marcar
+  // "votacion vencida" en una oferta que sigue Voting pero cuyo plazo ya paso.
+  private async proposalDeadlines(projectAddress: string): Promise<Map<number, Date | null>> {
+    const proposals = await this.proposals.listByProject(projectAddress);
+    return new Map(proposals.map((p) => [p.governorProposalId, p.deadline]));
   }
 
   async getDistribution(projectAddress: string): Promise<DistributionResponse> {

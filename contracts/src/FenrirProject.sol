@@ -178,6 +178,11 @@ contract FenrirProject is ReentrancyGuard, IFenrirProjectCallback {
         if (!fmpaReached) {
             require(block.timestamp <= fundingDeadline, "FenrirProject: funding window expired");
         }
+        // Nunca se acepta mas de lo que falta para el FF -- evita que sobre plata sin
+        // asignar a ningun hito, que quedaria trabada en el contrato para siempre (ver
+        // business_rules/fondeo-y-comision.md). El inversor debe reintentar con el monto
+        // exacto que todavia falta; totalRaised y ff ya son publicos para calcularlo.
+        require(totalRaised + msg.value <= ff, "FenrirProject: amount exceeds remaining FF");
 
         totalRaised += msg.value;
         token.mint(msg.sender, msg.value);
@@ -229,6 +234,12 @@ contract FenrirProject is ReentrancyGuard, IFenrirProjectCallback {
     }
 
     function onArbiterElected(address newArbiter) external override onlyGovernor {
+        // El Governor no se entera de la cancelacion del proyecto (no hay acoplamiento
+        // on-chain en esa direccion): una eleccion que ya estaba Active al momento de
+        // cancelar puede seguir resolviendose despues. Sin este guard, ese callback tardio
+        // pondria obraStarted=true y liberaria la tranche del Hito 0 sobre un proyecto
+        // ya cancelado (fondos reales al developer).
+        require(status != ProjectStatus.Cancelled, "FenrirProject: project cancelled");
         emit ArbiterElected(newArbiter);
         if (!obraStarted) {
             obraStarted = true;
@@ -276,6 +287,11 @@ contract FenrirProject is ReentrancyGuard, IFenrirProjectCallback {
     }
 
     function onMilestoneResolved(uint256 milestoneId, bool approved) external override onlyGovernor {
+        // Mismo guard que onArbiterElected: una votacion de hito que ya estaba Active o
+        // AwaitingArbiter al cancelar (p.ej. cancelStalledMilestone por arbiterTimedOut)
+        // puede resolverse despues via arbiterDecide/resolve. Sin este chequeo liberaria
+        // una tranche o avanzaria de hito sobre un proyecto ya cancelado.
+        require(status != ProjectStatus.Cancelled, "FenrirProject: project cancelled");
         Milestone storage m = milestones[milestoneId];
         require(m.status == MilestoneStatus.Voting, "FenrirProject: milestone not voting");
 
@@ -319,7 +335,11 @@ contract FenrirProject is ReentrancyGuard, IFenrirProjectCallback {
         require(token.balanceOf(msg.sender) > 0, "FenrirProject: not an investor");
 
         Milestone storage m = milestones[currentMilestoneIndex];
-        bool deadlineMissed = m.status == MilestoneStatus.Pending && block.timestamp > m.deadline;
+        // El Hito 0 arranca con deadline=0 (recien se fija en _activateMilestone, llamado desde
+        // onArbiterElected): sin el chequeo de obraStarted, m.status==Pending && block.timestamp
+        // > 0 da siempre true, y cualquier inversor podia cancelar el proyecto en medio de la
+        // eleccion de arbitro del Hito 0 (que todavia no resolvio, asi que obraStarted es false).
+        bool deadlineMissed = obraStarted && m.status == MilestoneStatus.Pending && block.timestamp > m.deadline;
         bool stalledForFunds = m.status == MilestoneStatus.Declared && !_fundsAvailableFor(currentMilestoneIndex);
         bool arbiterTimedOut = m.status == MilestoneStatus.Voting && governor.isArbiterTimedOut(m.proposalId);
         require(deadlineMissed || stalledForFunds || arbiterTimedOut, "FenrirProject: milestone not stalled");

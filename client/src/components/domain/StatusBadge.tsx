@@ -118,11 +118,15 @@ const OFFER_ICON: Record<OfferStatusValue, LucideIcon> = {
 export function OfferStatusBadge({
   status,
   display,
+  votingExpired = false,
 }: {
   status: OfferStatusValue;
+  /** Label + variante listos para pintar (los decide el backend, el front no los calcula). */
   display: Display;
+  /** La votacion ya vencio pero todavia no se resolvio on-chain (sigue en estado Voting). */
+  votingExpired?: boolean;
 }) {
-  const Icon = OFFER_ICON[status];
+  const Icon = votingExpired ? Clock : OFFER_ICON[status];
   return (
     <Badge variant={display.variant}>
       <Icon />

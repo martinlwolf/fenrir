@@ -11,8 +11,13 @@ export const saleOfferResponseSchema = z.object({
   status: z.enum(OFFER_STATUS),
   // Etiqueta lista para renderizar (label + variante); el front solo pinta.
   display: displaySchema,
-  // True cuando la oferta esta en votacion y tiene proposalId valido. Reemplaza la logica de
-  // OfferRow.tsx: el backend deriva, el frontend solo habilita/deshabilita la accion de voto.
+  // Plazo de votacion vencido pero la propuesta sigue Active (aun sin resolver on-chain):
+  // espeja MilestoneResponse.votingExpired. Sin esto el front mostraba "En votación" y dejaba
+  // votar aunque el revert on-chain ("FenrirGovernor: voting closed") lo fuera a rechazar.
+  votingExpired: z.boolean(),
+  // True cuando la oferta esta en votacion, tiene proposalId valido y esa votacion no vencio.
+  // Reemplaza la logica de OfferRow.tsx: el backend deriva, el frontend solo habilita/deshabilita
+  // la accion de voto.
   votable: z.boolean(),
   // Contexto del viewer frente a la oferta: usesDeveloperVote indica que el votante
   // usa castDeveloperSaleVote (true si es developer) vs castVote (inversor). El front

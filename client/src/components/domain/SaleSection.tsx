@@ -52,7 +52,11 @@ function OfferRow({
       <div className="space-y-1">
         <div className="flex items-center gap-2">
           <span className="font-medium">{formatWei(offer.amount)}</span>
-          <OfferStatusBadge status={offer.status} display={offer.display} />
+          <OfferStatusBadge
+            status={offer.status}
+            display={offer.display}
+            votingExpired={offer.votingExpired}
+          />
         </div>
         <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
           Comprador: <AddressTag address={offer.buyerWallet} />

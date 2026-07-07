@@ -29,6 +29,7 @@
     "FenrirGovernor: not awaiting arbiter": "Esta propuesta no está esperando la decisión del árbitro.",
     "FenrirGovernor: only token": "Solo el contrato del token (FDT) puede notificar la vacancia del árbitro.",
 
+    "FenrirProject: project cancelled": "El proyecto ya está cancelado: esta votación quedó sin efecto y no puede resolverse.",
     "FenrirProject: milestones mismatch": "Los presupuestos, plazos y descripciones de los hitos deben tener la misma cantidad de elementos, y debe haber al menos un hito.",
     "FenrirProject: FF must equal sum of milestone budgets": "El Fondeo Final (FF) debe ser igual a la suma de los presupuestos de todos los hitos.",
     "FenrirProject: invalid FMPA": "El Fondo Mínimo Para Arrancar (FMPA) debe ser al menos el costo del Hito 1 y no puede superar el Fondeo Final (FF).",
@@ -139,5 +140,5 @@
     "user rejected": "Rechazaste la transacción en tu wallet."
   },
 
-  "default": "No pudimos traducir este error al español, pero no lo ocultamos:"
+  "default": "Ocurrió un error inesperado al interactuar con el contrato."
 }

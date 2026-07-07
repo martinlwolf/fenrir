@@ -1,17 +1,17 @@
-import { Link } from "react-router-dom";
-import { ArrowRight, Building2, ShieldCheck, Vote } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { ProjectCard } from "@/components/domain/ProjectCard";
 import { CardsSkeleton } from "@/components/domain/states";
 import { ScrollSequenceHero } from "@/components/landing/ScrollSequenceHero";
 import { AnimationGrid, RevealFromTop } from "@/components/motion/Reveal";
+import { Button } from "@/components/ui/button";
 import { useProjects } from "@/hooks/useProjects";
+import { ArrowRight, Building2, ShieldCheck, Vote } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const STEPS = [
   {
     Icon: Building2,
     title: "Fondear el proyecto",
-    body: "Los inversores aportan ETH al contrato. Los fondos quedan en custodia on-chain, no en manos de un fiduciario.",
+    body: "Los inversores aportan ETH al contrato. Los fondos quedan on-chain, no en manos de un fiduciario.",
   },
   {
     Icon: Vote,

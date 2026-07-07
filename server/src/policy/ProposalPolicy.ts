@@ -3,7 +3,7 @@
 // No consulta repos ni decide nada on-chain: recibe valores primitivos y deriva sobre el espejo
 // (FR-020). No importa el model Proposal para no crear acoplamiento a persistence.
 import type { Capability, Display } from "@shared/schemas/common.schema";
-import type { ProposalStatusValue } from "@shared/constants/enums";
+import type { ProjectStatusValue, ProposalStatusValue } from "@shared/constants/enums";
 import { proposalDisplay } from "./display";
 import type { ViewerContext } from "./Viewer";
 
@@ -35,14 +35,25 @@ export interface ProposalDerived {
 
 /**
  * Calcula todos los estados derivados de una propuesta en una sola pasada.
- * @param p     - Datos escalares de la propuesta (no el model).
- * @param now   - Momento de referencia para expirar; por defecto `new Date()`.
+ * @param p             - Datos escalares de la propuesta (no el model).
+ * @param projectStatus - Estado actual del proyecto dueño de la propuesta. Una propuesta
+ *                        puede seguir "Active" en el espejo (nadie llamo resolve() todavia)
+ *                        aun despues de que el proyecto se cancelo o se completo: el gobierno
+ *                        del FenrirGovernor no se entera de la cancelacion (no hay
+ *                        acoplamiento on-chain entre ambos contratos), asi que sin este chequeo
+ *                        el front seguia mostrando "votar"/"finalizar" sobre un proyecto muerto.
+ * @param now           - Momento de referencia para expirar; por defecto `new Date()`.
  */
-export function proposalDerived(p: ProposalPolicyInput, now: Date = new Date()): ProposalDerived {
-  const active = p.status === "Active";
+export function proposalDerived(
+  p: ProposalPolicyInput,
+  projectStatus: ProjectStatusValue,
+  now: Date = new Date(),
+): ProposalDerived {
+  const projectClosed = projectStatus === "Cancelled" || projectStatus === "Completed";
+  const active = p.status === "Active" && !projectClosed;
   const expired = p.deadline < now;
   const canResolve = active && expired;
-  const awaitingArbiter = p.status === "AwaitingArbiter";
+  const awaitingArbiter = p.status === "AwaitingArbiter" && !projectClosed;
 
   // Hacia donde se inclina la balanza.
   const voted = p.votesFor + p.votesAgainst;
@@ -63,7 +74,7 @@ export function proposalDerived(p: ProposalPolicyInput, now: Date = new Date()):
   const quorumTarget = (p.totalPowerAtSnapshot * BigInt(p.quorumBps)) / 10000n;
   const quorumRemainingWei = quorumTarget > p.weightVoted ? quorumTarget - p.weightVoted : 0n;
 
-  const display = proposalDisplay({ active, expired, awaitingArbiter });
+  const display = proposalDisplay({ active, expired, awaitingArbiter, projectClosed });
 
   return { active, expired, canResolve, awaitingArbiter, display, lead, passing, quorumRemainingWei };
 }

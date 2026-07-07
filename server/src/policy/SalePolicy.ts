@@ -11,12 +11,24 @@ import { offerDisplay } from "./display";
 export function offerViewerFields(
   offer: { status: OfferStatusValue; proposalId: number | null },
   viewer: ViewerContext,
-): { votable: boolean; display: Display; viewer: { usesDeveloperVote: boolean } } {
+  // Deadline de la Proposal asociada (null si el offer no tiene proposalId todavia). Mismo
+  // Map<governorProposalId, Date|null> que ya arma project.service.ts para hitos.
+  proposalDeadline: Date | null,
+): { votingExpired: boolean; votable: boolean; display: Display; viewer: { usesDeveloperVote: boolean } } {
+  // Plazo de votacion vencido pero la propuesta sigue Active (el auto-resolver todavia no
+  // le mando resolve() on-chain): sin esto la oferta seguia mostrando "En votación" y
+  // habilitando el boton, y castVote/castDeveloperSaleVote revertian con "voting closed"
+  // (FenrirGovernor: voting closed) recien al firmar la transaccion.
+  const votingExpired =
+    offer.status === "Voting" && offer.proposalId != null && proposalDeadline != null && proposalDeadline < new Date();
+
   return {
-    // La oferta admite voto solo si esta en Voting y tiene proposalId asociado.
-    votable: offer.status === "Voting" && offer.proposalId != null,
+    votingExpired,
+    // La oferta admite voto solo si esta en Voting, tiene proposalId asociado y esa
+    // votacion no vencio.
+    votable: offer.status === "Voting" && offer.proposalId != null && !votingExpired,
     // Etiqueta lista para renderizar: el frontend solo mapea variant a color/icono.
-    display: offerDisplay(offer.status),
+    display: offerDisplay({ status: offer.status, votingExpired }),
     viewer: {
       // El developer vota con castDeveloperSaleVote; los inversores con castVote.
       // El front usa este flag para elegir la funcion sin conocer el rol directamente.

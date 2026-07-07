@@ -10,8 +10,9 @@
 //
 // Si ninguna entrada del diccionario matchea, nunca se devuelve un mensaje generico que
 // tape el motivo real (ver incidente: "insufficient funds" quedaba escondido detras de un
-// "se revirtio sin motivo especifico"): el ultimo recurso pega el mensaje crudo original,
-// aunque quede en ingles, para que el usuario siempre sepa que paso de verdad.
+// "se revirtio sin motivo especifico"): el ultimo recurso es el mensaje crudo tal cual,
+// sin ningun prefijo en español pegado adelante -- mezclar los dos idiomas en la misma
+// frase queda peor que mostrar el original en ingles directamente.
 import contractErrorsEs from "./contract-errors.es.json";
 
 interface TranslatableError {
@@ -60,12 +61,15 @@ export function translateContractError(error: unknown): string {
     return contractErrorsEs.generic[err.code as keyof typeof contractErrorsEs.generic];
   }
 
-  return `${contractErrorsEs.default} "${rawMessageFrom(err, error)}"`;
+  return rawMessageFrom(err, error) || contractErrorsEs.default;
 }
 
 function rawMessageFrom(err: TranslatableError, error: unknown): string {
   const raw = err.reason ?? err.shortMessage ?? err.message ?? String(error);
   const oneLine = raw.toString().replace(/\s+/g, " ").trim();
+  // String(error) sobre un objeto sin toString propio ("[object Object]") no es un mensaje
+  // util: mejor caer al default que mostrar eso.
+  if (oneLine === "" || oneLine === "[object Object]") return "";
   return oneLine.length > RAW_MESSAGE_MAX_LENGTH
     ? `${oneLine.slice(0, RAW_MESSAGE_MAX_LENGTH)}…`
     : oneLine;

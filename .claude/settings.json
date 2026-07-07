@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/contracts-i18n-reminder.js",
+            "statusMessage": "Revisando si hay que traducir errores de contratos…"
+          }
+        ]
+      }
+    ]
+  }
+}
