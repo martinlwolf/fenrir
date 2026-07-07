@@ -9,6 +9,8 @@ import {
   type VotingPowerResponse,
 } from "@shared/schemas/proposal.schema";
 import { getInvestments } from "./investors.service";
+import { getProject } from "./projects.service";
+import { getFdtBalance } from "@/lib/chain/contracts";
 
 export async function listProposals(address: string): Promise<ProposalResponse[]> {
   const { data } = await api.get(`/projects/${address}/proposals`);
@@ -58,7 +60,24 @@ export interface MyProposal {
 // resolvio; no decide negocio.
 export async function listMyProposals(wallet: string): Promise<MyProposal[]> {
   const investments = await getInvestments(wallet);
-  const projectAddresses = [...new Set(investments.map((i) => i.projectAddress))];
+  const investedAddresses = [...new Set(investments.map((i) => i.projectAddress))];
+
+  // El historial de inversion (evento Invested) nunca baja: si la wallet ya transfirio o
+  // reembolso TODO su FDT de un proyecto, no tiene sentido seguir avisandole de sus
+  // votaciones. Se filtra por balance actual en cadena, no por el historial.
+  const stillHolding = await Promise.all(
+    investedAddresses.map(async (address) => {
+      try {
+        const { tokenAddress } = await getProject(address);
+        const balance = tokenAddress ? await getFdtBalance(tokenAddress, wallet) : 0n;
+        return balance > 0n ? address : null;
+      } catch {
+        // Si no se puede resolver el balance, no se descarta el proyecto (fail-open).
+        return address;
+      }
+    }),
+  );
+  const projectAddresses = stillHolding.filter((a): a is string => a !== null);
 
   const perProject = await Promise.all(
     projectAddresses.map(async (address) => {

@@ -9,6 +9,7 @@ import { TxFeedback } from "@/components/domain/TxFeedback";
 import { useWallet } from "@/providers/WalletProvider";
 import { useInvestments, useClaimable } from "@/hooks/useInvestments";
 import { useProject } from "@/hooks/useProject";
+import { useFdtBalance } from "@/hooks/useFdtBalance";
 import { useWrite } from "@/hooks/useWrite";
 import { claimDistribution, claimRefund } from "@/lib/chain/contracts";
 import { formatWei, shortAddress } from "@/lib/format";
@@ -38,10 +39,15 @@ function ClaimButton({ projectAddress, type }: { projectAddress: string; type: C
   );
 }
 
-// Fila de inversión: muestra el monto y, resolviendo el tokenAddress del proyecto, permite
-// transferir el FDT de esa participación a otra wallet.
+// Fila de inversión: muestra el monto histórico invertido y, si la wallet todavía tiene FDT
+// vivo de ese proyecto (leído directo de la cadena, no del historial que nunca baja),
+// permite transferirlo a otra wallet.
 function InvestmentRow({ inv }: { inv: InvestmentResponse }) {
+  const { address } = useWallet();
   const { data: project } = useProject(inv.projectAddress);
+  const { data: fdtBalance } = useFdtBalance(project?.tokenAddress, address);
+  const canTransfer =
+    !!project?.tokenAddress && project.status !== "Cancelled" && !!fdtBalance && fdtBalance > 0n;
   return (
     <div className="flex items-center justify-between gap-4 border-b border-[var(--fen-divider)] py-2.5 last:border-0">
       <Link
@@ -55,7 +61,7 @@ function InvestmentRow({ inv }: { inv: InvestmentResponse }) {
       </Link>
       <div className="flex items-center gap-3">
         <span className="font-semibold text-[var(--fen-ink)]">{formatWei(inv.amount)}</span>
-        {project?.tokenAddress && <TransferFdtDialog tokenAddress={project.tokenAddress} />}
+        {canTransfer && <TransferFdtDialog tokenAddress={project.tokenAddress} />}
       </div>
     </div>
   );

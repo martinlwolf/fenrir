@@ -115,4 +115,21 @@ export const FENRIR_TOKEN_ABI: string[] = [
   "function holderAt(uint256 index) view returns (address)",
   // write (transferencia FDT; la delegacion es automatica on-chain en _update)
   "function transfer(address to, uint256 amount) returns (bool)",
+  // custom errors de OpenZeppelin (ERC20/ERC20Permit/ERC20Votes): sin declararlos aca ethers
+  // no puede decodificar el selector del revert y cae en "unknown custom error" en vez de
+  // traducirlo via contract-errors.es.json.
+  "error ERC20InsufficientBalance(address sender, uint256 balance, uint256 needed)",
+  "error ERC20InvalidSender(address sender)",
+  "error ERC20InvalidReceiver(address receiver)",
+  "error ERC20InsufficientAllowance(address spender, uint256 allowance, uint256 needed)",
+  "error ERC20InvalidApprover(address approver)",
+  "error ERC20InvalidSpender(address spender)",
+  "error ERC2612ExpiredSignature(uint256 deadline)",
+  "error ERC2612InvalidSigner(address signer, address owner)",
+  "error ERC5805FutureLookup(uint256 timepoint, uint48 clock)",
+  "error ERC6372InconsistentClock()",
+  "error VotesExpiredSignature(uint256 expiry)",
+  "error SafeCastOverflowedUintDowncast(uint8 bits, uint256 value)",
+  "error CheckpointUnorderedInsertion()",
+  "error ERC20ExceededSafeSupply(uint256 increasedSupply, uint256 cap)",
 ];

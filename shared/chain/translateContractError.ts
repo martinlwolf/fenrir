@@ -23,6 +23,9 @@ interface TranslatableError {
   errorName?: string;
   data?: { errorName?: string };
   cause?: { data?: { errorName?: string } };
+  // ethers v6 CallExceptionError: nombre del custom error decodificado usando el ABI del
+  // contrato (ver CallExceptionError.revert en la lib de ethers).
+  revert?: { name?: string } | null;
 }
 
 const PANIC_CODE_PATTERN = /panic code (0x[0-9a-fA-F]+)/i;
@@ -31,7 +34,8 @@ const RAW_MESSAGE_MAX_LENGTH = 300;
 export function translateContractError(error: unknown): string {
   const err = (error ?? {}) as TranslatableError;
 
-  const errorName = err.errorName ?? err.data?.errorName ?? err.cause?.data?.errorName;
+  const errorName =
+    err.errorName ?? err.data?.errorName ?? err.cause?.data?.errorName ?? err.revert?.name;
   if (errorName && errorName in contractErrorsEs.openZeppelin) {
     return contractErrorsEs.openZeppelin[errorName as keyof typeof contractErrorsEs.openZeppelin];
   }

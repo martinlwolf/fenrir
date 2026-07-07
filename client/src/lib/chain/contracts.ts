@@ -86,6 +86,13 @@ export async function getRefundInfo(projectAddress: string, wallet: string): Pro
   return { cancelled: true, claimable };
 }
 
+// Lee directo de la cadena el balance actual de FDT de una wallet. El historial de
+// inversiones del backend (espejo del evento Invested) nunca baja: no sirve para saber si la
+// wallet todavia tiene participacion despues de transferir o de reclamar un reembolso.
+export async function getFdtBalance(tokenAddress: string, wallet: string): Promise<bigint> {
+  return tokenRead(tokenAddress).balanceOf(wallet) as Promise<bigint>;
+}
+
 // --- Factory ---
 
 export async function registerDeveloper(
