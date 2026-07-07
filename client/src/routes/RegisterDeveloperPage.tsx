@@ -1,5 +1,15 @@
-import { useState, type ReactNode } from "react";
-import { Link } from "react-router-dom";
+import { AddressTag } from "@/components/domain/AddressTag";
+import { CertificatePill } from "@/components/domain/CertificateBadge";
+import { PageHeader } from "@/components/domain/PageHeader";
+import { TxFeedback } from "@/components/domain/TxFeedback";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useDeveloper } from "@/hooks/useDeveloper";
+import { useWrite } from "@/hooks/useWrite";
+import { registerDeveloper } from "@/lib/chain/contracts";
+import { useWallet } from "@/providers/WalletProvider";
 import {
   ArrowRight,
   Building2,
@@ -8,18 +18,8 @@ import {
   ShieldCheck,
   Wallet,
 } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { PageHeader } from "@/components/domain/PageHeader";
-import { CertificatePill } from "@/components/domain/CertificateBadge";
-import { TxFeedback } from "@/components/domain/TxFeedback";
-import { useWallet } from "@/providers/WalletProvider";
-import { useWrite } from "@/hooks/useWrite";
-import { useDeveloper } from "@/hooks/useDeveloper";
-import { registerDeveloper } from "@/lib/chain/contracts";
-import { AddressTag } from "@/components/domain/AddressTag";
+import { useState, type ReactNode } from "react";
+import { Link } from "react-router-dom";
 
 // Alta de developer (on-chain) firmando contra el FenrirFactory (FR-012). El registro se LEE
 // directo del factory on-chain (no del backend espejo), porque eso es lo que valida
@@ -110,7 +110,7 @@ export function RegisterDeveloperPage() {
                 </p>
                 <Button variant="brand" className="w-full" asChild>
                   <Link to="/create">
-                    Crear mi primer proyecto <ArrowRight className="size-4" />
+                    Crear nuevo proyecto <ArrowRight className="size-4" />
                   </Link>
                 </Button>
               </div>
